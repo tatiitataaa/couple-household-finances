@@ -219,6 +219,16 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# --- Project-specific ---
 .venv/
-data/raw/
 .env
+
+# Expense data is personal: never commit real data (only data/sample/)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Large model artifacts (commit small exported edge models only if needed)
+models/*
+!models/.gitkeep

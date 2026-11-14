@@ -1,1 +1,13 @@
+# Data & modeling
+pandas
+numpy
+scikit-learn
+jupyter
+matplotlib
 
+# Edge export & inference
+skl2onnx
+onnxruntime
+
+# Testing
+pytest
