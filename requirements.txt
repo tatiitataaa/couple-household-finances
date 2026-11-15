@@ -1,5 +1,6 @@
 # Data & modeling
 pandas
+openpyxl
 numpy
 scikit-learn
 jupyter

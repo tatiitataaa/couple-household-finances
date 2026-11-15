@@ -33,6 +33,25 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Data
+
+`data/raw/gabriela_transactions.xlsx` holds the labeled transactions, with two sheets:
+
+| Sheet | Rows | Dates | Purpose |
+|---|---|---|---|
+| `Training Data` | 3,523 | 2024-11-11 to 2026-11-10 | model training |
+| `Test` | 1,327 | 2025-04-12 to 2026-11-14 | held-out evaluation |
+
+Columns: `Date`, `Merchant`, `Amount (USD)`, `Type`, `Category`, `Detailed category`, `Pending`, `Payment channel`, `Transaction ID`, and the label **`Solo / Group`**.
+
+Load it with:
+
+```python
+import pandas as pd
+train = pd.read_excel("data/raw/gabriela_transactions.xlsx", sheet_name="Training Data")
+test  = pd.read_excel("data/raw/gabriela_transactions.xlsx", sheet_name="Test")
+```
+
 ## Data privacy
 
-Real expense data must stay in `data/raw/` and is excluded from git. Only commit synthetic or fully anonymized examples to `data/sample/`.
+This repository must stay **private**: it contains real personal financial data. Don't commit any other real data. Put synthetic or anonymized examples in `data/sample/`.
