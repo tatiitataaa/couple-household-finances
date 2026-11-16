@@ -10,7 +10,7 @@ The model is trained on transaction data (amount, merchant, category, date/time,
 data/
   raw/            labeled transactions (gabriela_transactions.xlsx)
   processed/      train/test CSVs + cached embeddings (gitignored)
-src/
+source/
   split_data.py   Excel -> data/processed/train.csv + test.csv
   train.py        logistic regression -> models/model.json
   train_embed.py  same + text-embedding-3-small merchant embeddings -> models/model_embed.json
@@ -50,8 +50,8 @@ test  = pd.read_excel("data/raw/gabriela_transactions.xlsx", sheet_name="Test")
 ## Train the model
 
 ```bash
-python src/split_data.py     # Excel -> data/processed/train.csv + test.csv
-python src/train.py --data data/processed/train.csv --test data/processed/test.csv --out models/model.json
+python source/split_data.py     # Excel -> data/processed/train.csv + test.csv
+python source/train.py --data data/processed/train.csv --test data/processed/test.csv --out models/model.json
 ```
 
 `model.json` is a logistic regression (merchant, category, detailed category, log amount) that the budgeting page loads in its Settings.
@@ -60,7 +60,7 @@ To compare against a version that also uses OpenAI `text-embedding-3-small` embe
 
 ```bash
 # put OPENAI_API_KEY=sk-... in .env (gitignored), then:
-python src/train_embed.py --data data/processed/train.csv --test data/processed/test.csv --out models/model_embed.json
+python source/train_embed.py --data data/processed/train.csv --test data/processed/test.csv --out models/model_embed.json
 ```
 
 This prints baseline vs. embedding metrics on the same test set and writes `model_embed.json`, which has the same fields as `model.json` plus an `embedding` block (`weights` is dotted with the merchant's embedding and added to the score). Embeddings are cached in `data/processed/`, so each merchant name is sent to the API only once. Only merchant names are sent to OpenAI, not amounts or dates.

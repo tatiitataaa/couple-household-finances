@@ -2,7 +2,7 @@
 Train a solo-vs-shared classifier and export model.json for the budgeting page.
 
 Usage:
-    python src/train.py --data data/processed/train.csv --test data/processed/test.csv --out models/model.json
+    python source/train.py --data data/processed/train.csv --test data/processed/test.csv --out models/model.json
 
     (Without --test, 20% of --data is held out for evaluation instead.)
 

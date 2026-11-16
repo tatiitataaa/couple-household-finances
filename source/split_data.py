@@ -2,7 +2,7 @@
 Split the labeled Excel workbook into separate train/test CSV files.
 
 Usage:
-    python src/split_data.py
+    python source/split_data.py
 
 Reads  data/raw/gabriela_transactions.xlsx  (sheets "Training Data" and "Test")
 Writes data/processed/train.csv and data/processed/test.csv

@@ -6,7 +6,7 @@ embedding models' results side by side on the same test set.
 
 Usage:
     export OPENAI_API_KEY=sk-...
-    python src/train_embed.py --data data/processed/train.csv --test data/processed/test.csv \
+    python source/train_embed.py --data data/processed/train.csv --test data/processed/test.csv \
         --out models/model_embed.json
 
 Scoring form (baseline from train.py plus one dot product):
