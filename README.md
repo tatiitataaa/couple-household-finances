@@ -52,6 +52,15 @@ train = pd.read_excel("data/raw/gabriela_transactions.xlsx", sheet_name="Trainin
 test  = pd.read_excel("data/raw/gabriela_transactions.xlsx", sheet_name="Test")
 ```
 
+## Train the model
+
+```bash
+python src/split_data.py     # Excel -> data/processed/train.csv + test.csv
+python src/train.py --data data/processed/train.csv --test data/processed/test.csv --out models/model.json
+```
+
+`model.json` is a logistic regression (merchant, category, detailed category, log amount) that the budgeting page loads in its Settings.
+
 ## Data privacy
 
 This repository must stay **private**: it contains real personal financial data. Don't commit any other real data. Put synthetic or anonymized examples in `data/sample/`.
