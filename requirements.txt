@@ -6,6 +6,7 @@ scipy
 scikit-learn
 jupyter
 matplotlib
+openai
 
 # Edge export & inference
 skl2onnx

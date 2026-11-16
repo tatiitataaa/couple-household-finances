@@ -8,21 +8,16 @@ The model is trained on transaction data (amount, merchant, category, date/time,
 
 ```
 data/
-  raw/          original expense data (gitignored, never committed)
-  processed/    cleaned / feature-engineered data (gitignored)
-  sample/       small synthetic or anonymized data that is safe to commit
-notebooks/      exploration and experiments
+  raw/            labeled transactions (gabriela_transactions.xlsx)
+  processed/      train/test CSVs + cached embeddings (gitignored)
 src/
-  features.py   feature engineering
-  train.py      model training
-  evaluate.py   metrics and evaluation
-  export.py     export trained model for edge (ONNX, quantization)
-models/         trained / exported models (gitignored)
-edge/           on-device inference code
-backend/        optional API
-frontend/       optional UI
-docs/           project documentation
-tests/          unit tests
+  split_data.py   Excel -> data/processed/train.csv + test.csv
+  train.py        logistic regression -> models/model.json
+  train_embed.py  same + text-embedding-3-small merchant embeddings -> models/model_embed.json
+  features.py     feature engineering (placeholder)
+  evaluate.py     metrics and evaluation (placeholder)
+  export.py       export trained model for edge (placeholder)
+models/           trained / exported models (gitignored)
 ```
 
 ## Setup
@@ -61,6 +56,15 @@ python src/train.py --data data/processed/train.csv --test data/processed/test.c
 
 `model.json` is a logistic regression (merchant, category, detailed category, log amount) that the budgeting page loads in its Settings.
 
+To compare against a version that also uses OpenAI `text-embedding-3-small` embeddings of the merchant name:
+
+```bash
+# put OPENAI_API_KEY=sk-... in .env (gitignored), then:
+python src/train_embed.py --data data/processed/train.csv --test data/processed/test.csv --out models/model_embed.json
+```
+
+This prints baseline vs. embedding metrics on the same test set and writes `model_embed.json`, which has the same fields as `model.json` plus an `embedding` block (`weights` is dotted with the merchant's embedding and added to the score). Embeddings are cached in `data/processed/`, so each merchant name is sent to the API only once. Only merchant names are sent to OpenAI, not amounts or dates.
+
 ## Data privacy
 
-This repository must stay **private**: it contains real personal financial data. Don't commit any other real data. Put synthetic or anonymized examples in `data/sample/`.
+This repository must stay **private**: it contains real personal financial data. Don't commit any other real data.
