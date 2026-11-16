@@ -14,6 +14,7 @@ source/
   split_data.py   Excel -> data/processed/train.csv + test.csv
   train.py        logistic regression -> models/model.json
   train_embed.py  same + text-embedding-3-small merchant embeddings -> models/model_embed.json
+  ridge_pipeline.py  L2 logistic regression with C tuning, calibration and F1 threshold -> calibration.png
   features.py     feature engineering (placeholder)
   evaluate.py     metrics and evaluation (placeholder)
   export.py       export trained model for edge (placeholder)
