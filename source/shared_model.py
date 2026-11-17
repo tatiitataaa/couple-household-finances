@@ -10,6 +10,7 @@ which is the case where embeddings should help.
 """
 import numpy as np
 import pandas as pd
+
 from sentence_transformers import SentenceTransformer
 from sklearn.compose import ColumnTransformer
 from sklearn.decomposition import PCA
