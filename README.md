@@ -30,21 +30,24 @@ pip install -r requirements.txt
 
 ## Data
 
-`data/raw/gabriela_transactions.xlsx` holds the labeled transactions, with two sheets:
+`data/raw/gabriela_transactions.xlsx` holds the labeled transactions. The two sheets used for modeling are:
 
 | Sheet | Rows | Dates | Purpose |
 |---|---|---|---|
-| `Training Data` | 3,523 | 2024-11-11 to 2026-11-10 | model training |
-| `Test` | 1,327 | 2025-04-12 to 2026-11-14 | held-out evaluation |
+| `training` | 3,554 | 2024-11-11 to 2026-11-15 | model training |
+| `test` | 1,327 | 2025-04-12 to 2026-11-14 | held-out evaluation |
 
 Columns: `Date`, `Merchant`, `Amount (USD)`, `Type`, `Category`, `Detailed category`, `Pending`, `Payment channel`, `Transaction ID`, and the label **`Solo / Group`**.
+
+The workbook also has `data_pd` and `Upload Data` sheets, which the scripts don't use. Dates in `training` mix `YYYY-MM-DD` and `M/D/YY` formats.
 
 Load it with:
 
 ```python
 import pandas as pd
-train = pd.read_excel("data/raw/gabriela_transactions.xlsx", sheet_name="Training Data")
-test  = pd.read_excel("data/raw/gabriela_transactions.xlsx", sheet_name="Test")
+train = pd.read_excel("data/raw/gabriela_transactions.xlsx", sheet_name="training")
+test  = pd.read_excel("data/raw/gabriela_transactions.xlsx", sheet_name="test")
+train["Date"] = pd.to_datetime(train["Date"], format="mixed")
 ```
 
 ## Train the model
