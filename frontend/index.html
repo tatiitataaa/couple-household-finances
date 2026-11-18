@@ -284,14 +284,12 @@ button{cursor:pointer}
 .datarow .t{flex:1;min-width:0}
 .datarow .t small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .datarow .mini{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;flex:none}
-.srcopt{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:12px 0;cursor:pointer}
-.srcopt:focus-visible{outline:2px solid var(--you);outline-offset:2px;border-radius:10px}
-.srcopt + .srcopt{border-top:1px solid var(--line)}
-.srcopt .mid{flex:1;min-width:0}
-.srcopt .nm{font-weight:600;display:flex;align-items:center;gap:8px}
-.srcopt .sm{font-size:13px;color:var(--muted);margin-top:1px}
-.srcopt .chev{color:var(--faint);flex:none}
-.soon{font-size:11px;font-weight:700;color:var(--you);background:var(--you-soft);border-radius:999px;padding:2px 8px}
+.datarow.cardrow{align-items:flex-start}
+.srcbtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chipbtn{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 11px 0 9px;border-radius:999px;background:var(--surface-2);color:var(--you);font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
+.chipbtn svg{width:14px;height:14px;flex:none}
+.chipbtn:hover{background:var(--you-soft)}
+.chipbtn:focus-visible{outline:2px solid var(--you);outline-offset:2px}
 .textbtn{border:0;background:none;padding:0;font-weight:500;color:var(--you);font-size:15px;text-align:left;width:100%}
 .textbtn.danger{color:#E5484D}
 
@@ -1020,11 +1018,15 @@ function renderSettings(){
 
   <div class="grouplab">Data</div>
   <div class="group">
-    ${["me","partner"].map(v => `<div class="item datarow">
+    ${["me","partner"].map(v => `<div class="item datarow cardrow">
       <span class="mini" style="background:${v === "me" ? "var(--you)" : "var(--partner)"}">${esc(initial(nameOf(v)))}</span>
-      <span class="t">${esc(S.names[v])}’s card<small>${S.source[v] === "sample" ? "Sample data" : esc(S.source[v])}</small></span>
-      <input class="filein" type="file" id="f-${v}" accept=".csv,.xlsx,.xls" data-act="upload" data-v="${v}">
-      <button class="pick" data-act="adddata" data-v="${v}">Add data</button>
+      <span class="t">${esc(S.names[v])}’s card<small>${S.source[v] === "sample" ? "Sample data" : esc(S.source[v])}</small>
+        <span class="srcbtns">
+          <input class="filein" type="file" id="f-${v}" accept=".csv,.xlsx,.xls" data-act="upload" data-v="${v}">
+          <label class="chipbtn" for="f-${v}" tabindex="0" role="button">${svg(ICON.upload)}Upload</label>
+          <button class="chipbtn" data-act="plaid" data-v="${v}">${svg(ICON.bank)}Connect with Plaid</button>
+        </span>
+      </span>
     </div>`).join("")}
     <div class="item datarow">
       <span class="mini" style="background:var(--surface-2);color:var(--muted)">${svg(ICON.spark, 'width="16" height="16"')}</span>
@@ -1380,27 +1382,6 @@ document.addEventListener("click", e => {
     } else decide(y);
   }
   else if (act === "open") openSheet(el.dataset.id);
-  else if (act === "adddata"){
-    const v = el.dataset.v;
-    overlay.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="Add ${esc(nameOf(v))}’s transactions">
-      <div class="grab"></div>
-      <div class="hd"><span class="mini" style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:700;color:#fff;background:${v === "me" ? "var(--you)" : "var(--partner)"}">${esc(initial(nameOf(v)))}</span><div><div class="nm">Add ${esc(nameOf(v))}’s transactions</div><div class="sm">Choose how to bring in purchases</div></div></div>
-      <div style="margin-top:10px">
-        <button class="srcopt" data-act="plaid" data-v="${v}">
-          <span class="cic" style="background:var(--you-soft);color:var(--you)">${svg(ICON.bank)}</span>
-          <span class="mid"><span class="nm">Connect with Plaid<span class="soon">Soon</span></span><span class="sm" style="display:block">Sync card purchases automatically</span></span>
-          <span class="chev">${svg(ICON.chevR, 'width="16" height="16"')}</span>
-        </button>
-        <button class="srcopt" data-act="pickfile" data-v="${v}">
-          <span class="cic" style="background:var(--shared-soft);color:var(--shared)">${svg(ICON.upload)}</span>
-          <span class="mid"><span class="nm">Upload a file</span><span class="sm" style="display:block">CSV or Excel export from your bank</span></span>
-          <span class="chev">${svg(ICON.chevR, 'width="16" height="16"')}</span>
-        </button>
-      </div>
-    </div></div>`;
-    if (e.detail === 0){ const f = overlay.querySelector(".srcopt"); if (f) f.focus(); } /* keyboard only */
-  }
-  else if (act === "pickfile"){ const inp = document.getElementById("f-" + el.dataset.v); closeSheet(); if (inp) inp.click(); }
   else if (act === "plaid"){
     /* Painted door: not built yet. Count the interest and say so honestly. */
     S.plaidInterest = (S.plaidInterest || 0) + 1; save();
@@ -1584,7 +1565,10 @@ document.addEventListener("change", e => {
   if (el.dataset.act === "txsplit"){ render(); openSheet(el.dataset.id); }
   if (el.dataset.act === "bandtoggle"){ const v = el.checked ? 0.08 : 0.2; [S.model, S.baseModel].forEach(m => { m.band.low = v; }); save(); render(); }
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && overlay.innerHTML) closeSheet(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && overlay.innerHTML) closeSheet();
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("label.chipbtn")){ e.preventDefault(); e.target.click(); }
+});
 
 /* A newer built-in model replaces the one saved in this browser. Your review threshold is kept;
    weights learned from earlier swipes are reset, since they were tuned to the old model. */
