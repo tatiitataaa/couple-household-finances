@@ -279,7 +279,9 @@ button{cursor:pointer}
 .foot{font-size:12px;color:var(--muted);margin:2px 16px 18px}
 .grouplab{font-size:13px;color:var(--muted);margin:22px 16px 8px}
 .filein{display:none}
-.pick{border-radius:999px;padding:7px 14px;background:var(--surface-2);font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;color:var(--you)}
+.pick{border:0;border-radius:999px;padding:7px 14px;background:var(--surface-2);font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;color:var(--you)}
+.picks{display:flex;flex-direction:column;align-items:stretch;gap:6px;flex:none}
+.picks .pick{text-align:center}
 .textbtn{border:0;background:none;padding:0;font-weight:500;color:var(--you);font-size:15px;text-align:left;width:100%}
 .textbtn.danger{color:#E5484D}
 
@@ -1007,7 +1009,7 @@ function renderSettings(){
   <div class="group">
     ${["me","partner"].map(v => `<div class="item">
       <span class="t">${esc(S.names[v])}’s card<small>${S.source[v] === "sample" ? "Sample data" : esc(S.source[v])}</small></span>
-      <span><input class="filein" type="file" id="f-${v}" accept=".csv,.xlsx,.xls" data-act="upload" data-v="${v}"><label class="pick" for="f-${v}">Upload</label></span>
+      <span class="picks"><input class="filein" type="file" id="f-${v}" accept=".csv,.xlsx,.xls" data-act="upload" data-v="${v}"><label class="pick" for="f-${v}">Upload</label><button class="pick" data-act="plaid" data-v="${v}">Connect with Plaid</button></span>
     </div>`).join("")}
     <div class="item">
       <span class="t">Model<small>${m.version === "placeholder" ? "Placeholder weights (model.js not found)" : `Built in, ${esc(m.version)}${m.trainedOn ? `, trained on ${m.trainedOn.purchases.toLocaleString("en-US")} purchases` : ""}`}</small></span>
@@ -1362,6 +1364,11 @@ document.addEventListener("click", e => {
     } else decide(y);
   }
   else if (act === "open") openSheet(el.dataset.id);
+  else if (act === "plaid"){
+    /* Painted door: not built yet. Count the interest and say so honestly. */
+    S.plaidInterest = (S.plaidInterest || 0) + 1; save();
+    toast(`Connecting ${nameOf(el.dataset.v)}’s bank with Plaid is coming soon. For now, upload a CSV or Excel export.`);
+  }
   else if (act === "mark"){
     const t = S.tx[S.viewer].find(x => x.id === el.dataset.id);
     if (t){ applyLabel(t, Number(el.dataset.y)); closeSheet(); render(); }
