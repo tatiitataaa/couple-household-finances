@@ -7,11 +7,19 @@ Predicts whether an expense is a **group (couple)** or **solo** expense.
 ## Project structure
 
 ```
-data/                 your labeled transactions (gitignored, never committed)
+data/raw/Transactions.xlsx   labeled transactions used for training
 source/
-  shared_model.py     load, split, train and compare the models
+  shared_model.py            load, split, train and compare the models
+  export_model.py            export the trained model for the frontend
+models/shared_model.json     exported model
+notebooks/                   notebook version of the model
+frontend/index.html          "Shared: budgeting for two" app (open in a browser)
 requirements.txt
 ```
+
+## Frontend
+
+Open `frontend/index.html` in a browser. It starts with built-in sample data; upload transactions and a model JSON in **Settings → Data**. Everything runs in the browser, and files stay on the device.
 
 ## Setup
 

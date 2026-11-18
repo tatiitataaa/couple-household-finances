@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shared: budgeting for two</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#F2F3F7; --surface:#FFFFFF; --surface-2:#F7F8FA; --ink:#0E1116; --muted:#6B7280; --faint:#9CA3AF; --line:#E8EAEF;
+  --you:#5B5BF6; --you-soft:#ECECFE;
+  --shared:#14B88A; --shared-soft:#E2F7F0;
+  --partner:#F59E0B; --partner-soft:#FEF3DC;
+  --warn:#F97316; --warn-soft:#FFEEDF;
+  --hero-1:#16182F; --hero-2:#2A2464;
+  --font:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
+  --font-display:-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top, 0px);
+  padding-bottom:env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#000000; --surface:#151518; --surface-2:#1E1E22; --ink:#F4F5F7; --muted:#9A9DA6; --faint:#6B6E77; --line:#26262B;
+    --you:#8686FF; --you-soft:#24244A;
+    --shared:#2FD6A3; --shared-soft:#113A2F;
+    --partner:#FBBF24; --partner-soft:#3B2E10;
+    --warn:#FB923C; --warn-soft:#3A2412;
+    --hero-1:#1A1B33; --hero-2:#30287A;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#000000; --surface:#151518; --surface-2:#1E1E22; --ink:#F4F5F7; --muted:#9A9DA6; --faint:#6B6E77; --line:#26262B;
+  --you:#8686FF; --you-soft:#24244A;
+  --shared:#2FD6A3; --shared-soft:#113A2F;
+  --partner:#FBBF24; --partner-soft:#3B2E10;
+  --warn:#FB923C; --warn-soft:#3A2412;
+  --hero-1:#1A1B33; --hero-2:#30287A;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top, 0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top, 0px);z-index:10;background:var(--bg)}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--you);outline-offset:2px;border-radius:8px}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.app{max-width:440px;margin:0 auto;padding:0 16px 104px}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top, 0px);z-index:6;background:var(--bg);padding:12px 0 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.people{display:flex;align-items:center;gap:6px}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;border:2px solid transparent;background:var(--surface);color:var(--muted);transition:transform .15s}
+.av[aria-pressed="true"]{border-color:var(--ink);color:#fff}
+.av.me[aria-pressed="true"]{background:var(--you)}
+.av.partner[aria-pressed="true"]{background:var(--partner)}
+.av[aria-pressed="false"]{opacity:.7}
+.people .viewing{font-size:13px;color:var(--muted);margin-left:4px}
+.monthpill{display:flex;align-items:center;background:var(--surface);border-radius:999px;padding:2px;font-weight:600;font-size:14px}
+.monthpill button{border:0;background:none;width:30px;height:30px;border-radius:50%;color:var(--muted);display:grid;place-items:center}
+.monthpill button:disabled{opacity:.25;cursor:default}
+.monthpill span{padding:0 4px;min-width:72px;text-align:center}
+.pagetitle{font-family:var(--font-display);font-size:30px;font-weight:800;letter-spacing:-0.025em;margin:6px 0 14px}
+
+/* hero card */
+.hero{position:relative;overflow:hidden;border-radius:24px;padding:20px 20px 18px;color:#fff;background:radial-gradient(120% 140% at 100% 0%, var(--hero-2) 0%, var(--hero-1) 62%)}
+.hero .k{font-size:13px;color:rgba(255,255,255,.66);font-weight:500}
+.hero .big{font-family:var(--font-display);font-size:46px;font-weight:800;letter-spacing:-0.035em;line-height:1.05;margin:4px 0 6px}
+.hero .big .cents{font-size:24px;opacity:.6;letter-spacing:-0.01em}
+.hero .sub{font-size:14px;color:rgba(255,255,255,.78);max-width:34ch}
+.seg{display:flex;height:8px;margin:18px 0 10px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.12)}
+.seg span{height:100%}
+.seg span + span{box-shadow:inset 2px 0 0 rgba(22,24,47,.55)}
+.hero .leg{display:flex;justify-content:space-between;font-size:13px}
+.hero .eq{display:flex;align-items:flex-start;gap:14px;margin-top:14px}
+.hero .eq .part b{display:block;font-size:19px;font-weight:700;color:#fff;letter-spacing:-0.01em}
+.hero .eq .part span{font-size:12px;color:rgba(255,255,255,.7)}
+.hero .eq .op{font-size:20px;font-weight:300;color:rgba(255,255,255,.5);line-height:1.2}
+.hero .seg + .sub{margin-top:2px}
+.hero .leg b{display:block;font-size:16px;font-weight:700;color:#fff;margin-top:2px}
+.hero .leg span{color:rgba(255,255,255,.66)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+
+.banner{margin-top:12px;background:var(--surface);border-radius:18px;padding:12px 12px 12px 14px;display:flex;align-items:center;gap:12px}
+.banner .ic{width:34px;height:34px;border-radius:10px;background:var(--warn-soft);color:var(--warn);display:grid;place-items:center;flex:none}
+.banner .tx{flex:1;font-size:14px}
+.banner .tx b{display:block;font-weight:600}
+.banner .tx span{color:var(--muted);font-size:13px}
+.pillbtn{border:0;background:var(--ink);color:var(--bg);border-radius:999px;padding:8px 14px;font-weight:600;font-size:13px;white-space:nowrap}
+
+/* sections */
+.sec{margin-top:26px}
+.sechead{display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 10px}
+.sechead h2{font-family:var(--font-display);font-size:19px;font-weight:700;letter-spacing:-0.015em;margin:0}
+.sechead span{font-size:13px;color:var(--muted)}
+.panel{background:var(--surface);border-radius:20px;padding:6px 16px}
+
+/* settle */
+.settle .who2{display:flex;align-items:center;gap:12px;padding:14px 0}
+.settle button.who2{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:14px 0;width:100%;cursor:pointer;color:var(--ink)}
+.settle button.who2:focus-visible{outline:2px solid var(--you);outline-offset:2px;border-radius:10px}
+.settle .who2 .chev{color:var(--faint);flex:none;display:grid;place-items:center}
+.paylist{list-style:none;margin:12px 0 0;padding:0;max-height:52vh;overflow-y:auto}
+.paylist li{display:flex;align-items:center;gap:12px;padding:10px 0}
+.paylist li + li{border-top:1px solid var(--line)}
+.paylist .mid{flex:1;min-width:0}
+.paylist .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.paylist .sm{font-size:12px;color:var(--muted)}
+.setbtn{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--ink)}
+.setbtn[aria-pressed="true"]{background:var(--shared-soft);border-color:transparent;color:var(--shared)}
+
+.settle .who2 + .who2{border-top:1px solid var(--line)}
+.settle .mini{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;flex:none}
+.settle .who2 .t{flex:1;font-size:14px}
+.settle .who2 .t small{display:block;color:var(--muted);font-size:12px}
+.settle .who2 .v{font-weight:600}
+.settle .result{margin:0 -16px -6px;padding:14px 16px;border-radius:0 0 20px 20px;background:var(--surface-2);display:flex;justify-content:space-between;align-items:center}
+.settle .result .t{font-size:13px;color:var(--muted)}
+.settle .result .t b{display:block;color:var(--ink);font-size:16px;font-weight:700}
+.settle .result .v{font-family:var(--font-display);font-size:24px;font-weight:800;letter-spacing:-0.02em}
+
+/* split tiles */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.tile{background:var(--surface);border-radius:18px;padding:14px}
+.tile .t{font-size:13px;color:var(--muted);display:flex;align-items:center}
+.tile .v{font-family:var(--font-display);font-size:24px;font-weight:800;letter-spacing:-0.02em;margin-top:4px}
+.tile .p{font-size:12px;color:var(--faint)}
+
+/* category rows */
+.row{display:flex;align-items:center;gap:12px;padding:12px 0}
+.row + .row{border-top:1px solid var(--line)}
+.catrow{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:12px 0;width:100%;cursor:pointer;color:var(--ink)}
+.catrow:focus-visible{outline:2px solid var(--you);outline-offset:2px;border-radius:10px}
+.catrow .chev{color:var(--faint);flex:none}
+.cic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none}
+.cic svg{width:19px;height:19px}
+.row .mid{flex:1;min-width:0}
+.row .nm{font-weight:600;font-size:15px;display:flex;justify-content:space-between;gap:8px}
+.row .sm{font-size:12px;color:var(--muted);margin-top:2px;display:flex;justify-content:space-between}
+.thin{display:flex;height:4px;margin-top:7px;border-radius:2px;overflow:hidden}
+.thin span{height:100%}
+
+/* chart */
+.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;border:0;background:var(--surface);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:500;color:var(--muted)}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.chartbox{background:var(--surface);border-radius:20px;padding:16px 14px 10px}
+.chartbox svg{width:100%;height:auto;display:block}
+.chartleg{display:flex;gap:16px;font-size:12px;color:var(--muted);margin:8px 2px 0}
+
+/* review */
+.deck{position:relative;display:grid;margin-top:6px}
+.card{position:relative;grid-area:1/1;min-height:350px;min-width:0;box-sizing:border-box;background:var(--surface);border-radius:28px;padding:24px;display:flex;flex-direction:column;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.card.top{cursor:grab;box-shadow:0 18px 40px -22px rgba(14,17,22,.35)}
+.card.under{transform:scale(.94) translateY(16px);opacity:.55}
+.card .logo{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;font-weight:800;font-size:24px;color:#fff}
+.card .merchant{font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:-0.02em;margin-top:20px;line-height:1.1}
+.card .meta{color:var(--muted);font-size:14px;margin-top:4px}
+.catchip{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;margin-top:12px;border:0;background:var(--surface-2);border-radius:999px;padding:4px 12px 4px 4px;font-weight:600;font-size:14px;color:var(--ink)}
+.catchip .cic{width:28px;height:28px;border-radius:50%}
+.catchip .cic svg{width:15px;height:15px}
+.catchip > svg{color:var(--muted)}
+#topcard .logo, .card.under .logo, #topcard .catchip, .card.under .catchip{align-self:center}
+#topcard .merchant, #topcard .meta, #topcard .amount, .card.under .merchant, .card.under .meta, .card.under .amount{text-align:center}
+.catlist{list-style:none;margin:6px 0 0;padding:0}
+.catlist button{all:unset;display:flex;align-items:center;gap:12px;width:100%;padding:9px 0;cursor:pointer;font-weight:500;box-sizing:border-box}
+.catlist button:focus-visible{outline:2px solid var(--you);outline-offset:2px;border-radius:10px}
+.catlist li + li button{border-top:1px solid var(--line)}
+.catlist .ck{margin-left:auto;color:var(--you)}
+.allrow{display:flex;align-items:center;gap:10px;margin-top:6px;font-size:14px;color:var(--muted)}
+.ends{display:flex;justify-content:space-between;font-size:12px;color:var(--faint);margin-top:2px}
+.preview{margin-top:10px;font-size:13px;color:var(--ink);background:var(--surface-2);border-radius:10px;padding:9px 12px}
+.outcomes{list-style:none;margin:12px 0 0;padding:0;font-size:13px}
+.outcomes li{display:flex;align-items:center;gap:10px;padding:5px 0}
+.outcomes i{width:10px;height:10px;border-radius:50%;flex:none}
+.outcomes span{color:var(--muted);width:88px;flex:none}
+.outcomes b{font-weight:600}
+.switch{appearance:none;-webkit-appearance:none;flex:none;width:50px;height:30px;border-radius:15px;background:var(--line);position:relative;cursor:pointer;margin:0;transition:background .2s}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.2);transition:transform .2s}
+.switch:checked{background:var(--shared)}
+.switch:checked::after{transform:translateX(20px)}
+.nmbtn{all:unset;display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;cursor:pointer}
+.nmbtn:focus-visible{outline:2px solid var(--you);outline-offset:2px;border-radius:6px}
+.minichip{display:inline-flex;align-items:center;gap:4px;margin-top:3px;border:0;background:var(--surface-2);border-radius:999px;padding:2px 8px;font-size:12px;font-weight:500;color:var(--muted)}
+.newcat{display:flex;gap:8px;margin:8px 0 6px}
+.newcat input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface-2);border-radius:12px;padding:10px 12px}
+.newcat input:focus{outline:2px solid var(--you);outline-offset:0}
+.allrow input{width:20px;height:20px;accent-color:var(--you);margin:0}
+.card .amount{font-family:var(--font-display);font-size:48px;font-weight:800;letter-spacing:-0.035em;margin-top:14px}
+.card .gauge{margin-top:auto}
+#topcard, .card.under{justify-content:center}
+#topcard .gauge, .card.under .gauge{margin-top:28px;width:100%}
+#topcard .reasons, .card.under .reasons{justify-content:center}
+.card .gauge .lab{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:8px}
+.card .gauge .lab b{color:var(--ink)}
+.track{height:6px;border-radius:3px;background:var(--you-soft);overflow:hidden}
+.track span{display:block;height:100%;border-radius:3px;background:var(--shared)}
+.reasons{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.reasons span{max-width:100%;overflow-wrap:anywhere;text-align:center;line-height:1.35;font-size:12px;background:var(--surface-2);border-radius:999px;padding:5px 10px;color:var(--muted)}
+.stamp{position:absolute;top:24px;padding:6px 12px;border-radius:999px;font-weight:700;font-size:14px;opacity:0;color:#fff}
+.stamp.sh{right:24px;background:var(--shared)}
+.stamp.so{left:24px;background:var(--you)}
+.decide{display:flex;justify-content:center;gap:28px;margin-top:22px}
+.decide button{border:0;display:flex;flex-direction:column;align-items:center;gap:8px;background:none;font-size:13px;font-weight:600;color:var(--muted)}
+.decide .circ{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:var(--surface);box-shadow:0 6px 18px -10px rgba(14,17,22,.35)}
+.decide .circ svg{width:26px;height:26px}
+.decide .so .circ{color:var(--you)}
+.decide .sh .circ{background:var(--shared);color:#fff}
+.progress{font-size:13px;color:var(--muted);margin:-6px 4px 0}
+.skiprow{display:flex;align-items:center;justify-content:space-between;margin:12px 4px 0}
+.skiprow .pos{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.navbtn{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer}
+.navbtn:disabled{opacity:.4;cursor:default}
+.empty{text-align:center;padding:70px 20px;color:var(--muted)}
+.empty .ic{width:64px;height:64px;border-radius:22px;margin:0 auto 16px;display:grid;place-items:center;background:var(--shared-soft);color:var(--shared)}
+.empty h3{color:var(--ink);font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-0.02em;margin:0 0 6px}
+.empty p{margin:0 auto;max-width:30ch;font-size:14px}
+
+/* transaction rows */
+.txlist{list-style:none;margin:0;padding:0}
+.txrow{all:unset;display:flex;align-items:center;gap:12px;width:100%;padding:11px 0;cursor:pointer}
+.txlist li + li .txrow, .txlist li + li > .txrow{border-top:1px solid var(--line)}
+.txrow:focus-visible{outline:2px solid var(--you);outline-offset:2px;border-radius:10px}
+.mlogo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff;flex:none}
+.txrow .mid{flex:1;min-width:0}
+.txrow .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.txrow .sm{font-size:12px;color:var(--muted);margin-top:1px}
+.txrow .rt{text-align:right;flex:none}
+.txrow .amt{font-weight:600}
+.st{font-size:12px;margin-top:2px;display:flex;align-items:center;justify-content:flex-end;gap:5px;color:var(--muted)}
+.st i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.daylab{font-size:12px;font-weight:600;color:var(--faint);padding:14px 0 2px}
+
+/* settings */
+.group{background:var(--surface);border-radius:18px;overflow:hidden;margin-bottom:10px}
+.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px}
+.item + .item{border-top:1px solid var(--line)}
+.item .t{font-size:15px}
+.item .t small{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.item input[type=text]{border:0;background:none;text-align:right;color:var(--muted);width:50%;padding:0}
+.item input[type=text]:focus{color:var(--ink);outline:none}
+.stack{display:block}
+.stack input[type=range]{width:100%;margin-top:10px;accent-color:var(--you)}
+.splitview{display:flex;height:30px;border-radius:10px;overflow:hidden;margin-top:10px;font-size:13px;font-weight:600;color:#fff}
+.splitwrap{position:relative;margin-top:10px}
+.splitwrap .splitview{height:40px;margin-top:0;border-radius:12px}
+.stack input.splitrange[type=range]{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;margin:0;padding:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:ew-resize}
+.splitrange::-webkit-slider-runnable-track{background:transparent;height:40px}
+.splitrange::-moz-range-track{background:transparent;height:40px}
+.splitrange::-webkit-slider-thumb{-webkit-appearance:none;width:6px;height:28px;margin-top:6px;border-radius:3px;background:rgba(255,255,255,.95);border:0;box-shadow:0 1px 4px rgba(0,0,0,.28)}
+.splitrange::-moz-range-thumb{width:6px;height:28px;border-radius:3px;background:rgba(255,255,255,.95);border:0;box-shadow:0 1px 4px rgba(0,0,0,.28)}
+.splitrange:focus-visible{outline:2px solid var(--you);outline-offset:4px;border-radius:12px}
+.splitview span{display:grid;place-items:center;min-width:0;overflow:hidden;white-space:nowrap}
+.thresh .th-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.thresh .th-big{font-family:var(--font-display);font-size:52px;font-weight:800;letter-spacing:-0.04em;line-height:1}
+.thresh .th-sub{font-size:13px;color:var(--muted);margin-top:4px;max-width:20ch}
+.thresh .th-impact{text-align:right;background:var(--warn-soft);color:var(--warn);border-radius:14px;padding:8px 12px;flex:none}
+.thresh .th-impact b{display:block;font-family:var(--font-display);font-size:24px;font-weight:800;letter-spacing:-0.02em;line-height:1.1}
+.thresh .th-impact span{font-size:12px;font-weight:600}
+.zones{display:flex;height:28px;border-radius:10px;overflow:hidden;margin-top:12px;font-size:12px;font-weight:600;color:#fff}
+.seg3{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--surface-2);border-radius:12px;padding:3px;margin-top:10px}
+.seg3 button{border:0;background:none;border-radius:10px;padding:9px 4px;font-weight:600;font-size:14px;color:var(--muted)}
+.seg3 button[aria-checked="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 4px rgba(14,17,22,.12)}
+.zones span{display:grid;place-items:center;min-width:0;overflow:hidden;white-space:nowrap;transition:width .15s ease}
+.zones span + span{box-shadow:inset 2px 0 0 var(--surface)}
+.ticks{position:relative;height:16px;font-size:11px;color:var(--faint);margin-top:4px}
+.ticks span{position:absolute;transform:translateX(-50%)}
+.thresh input[type=range]{margin-top:6px}
+.foot{font-size:12px;color:var(--muted);margin:2px 16px 18px}
+.grouplab{font-size:13px;color:var(--muted);margin:22px 16px 8px}
+.filein{display:none}
+.pick{border-radius:999px;padding:7px 14px;background:var(--surface-2);font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;color:var(--you)}
+.textbtn{border:0;background:none;padding:0;font-weight:500;color:var(--you);font-size:15px;text-align:left;width:100%}
+.textbtn.danger{color:#E5484D}
+
+/* tab bar */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:8;background:color-mix(in srgb, var(--surface) 82%, transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom, 0px)}
+nav.tabs .inner{max-width:440px;margin:0 auto;display:flex}
+nav.tabs button{flex:1;border:0;background:none;padding:8px 0 10px;font-size:11px;font-weight:600;color:var(--faint);display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button[aria-current="page"]{color:var(--you)}
+.badge{position:absolute;top:4px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--warn);color:#fff;font-size:10px;line-height:17px;font-weight:700}
+
+/* sheet + toast */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:440px;border-radius:28px 28px 0 0;padding:10px 20px calc(22px + env(safe-area-inset-bottom, 0px))}
+.grab{width:38px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 16px}
+.sheet .hd{display:flex;align-items:center;gap:12px}
+.sheet .hd .nm{font-family:var(--font-display);font-size:20px;font-weight:800;letter-spacing:-0.02em}
+.sheet .hd .sm{font-size:13px;color:var(--muted)}
+.sheet .amt{font-family:var(--font-display);font-size:40px;font-weight:800;letter-spacing:-0.03em;margin:16px 0 14px}
+.sheet .acts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.txsplit{margin-top:18px}
+.trow{display:block}
+.tacts{display:flex;flex-wrap:wrap;gap:6px;padding:0 0 12px 50px}
+.xferopts{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.sheet .acts button[disabled]{cursor:default;opacity:1;box-shadow:inset 0 0 0 2px currentColor}
+.sheet .acts .b-shared[disabled]{box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)}
+.sheet .acts button:not([disabled]):not(:only-child){opacity:.9}
+.lwrap{position:relative;flex:none;display:block}
+.pbadge{position:absolute;right:-5px;bottom:-5px;width:19px;height:19px;border-radius:50%;font-size:10px;font-weight:700;color:#fff;display:grid;place-items:center;border:2px solid var(--surface)}
+.pchip{display:inline-block;margin-top:3px;font-size:12px;font-weight:600;color:var(--partner);background:var(--partner-soft);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.settlecand{margin:0 0 10px}
+.settlecand .cbtns{display:flex;flex-direction:column;align-items:stretch;gap:4px;flex:none}
+.settlecand .cbtns .textbtn{width:auto;font-size:12px;text-align:center;color:var(--muted)}
+.monlab{font-size:12px;font-weight:600;color:var(--faint);padding:12px 0 0}
+.xbtn{border:0;background:none;color:var(--faint);padding:4px;margin-left:4px;display:grid;place-items:center}
+.payrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.payrow label{display:block;font-size:13px;color:var(--muted)}
+.payrow input{display:block;width:100%;margin-top:4px;border:1px solid var(--line);background:var(--surface-2);border-radius:12px;padding:10px 12px;color:var(--ink)}
+.txsplit .lab2{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}
+.sheet .acts button{border:0;border-radius:14px;padding:14px;font-weight:600;font-size:15px}
+.b-solo{background:var(--you-soft);color:var(--you)}
+.b-shared{background:var(--shared);color:#fff}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:14px;font-size:13px;font-weight:500;width:max-content;max-width:min(400px, 90vw);box-shadow:0 10px 30px -12px rgba(0,0,0,.5)}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<nav class="tabs" aria-label="Sections"><div class="inner" id="tabs"></div></nav>
+<div id="overlay"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- constants ---------- */
+const STORE_KEY = "shared-budget:v1";
+const EXCLUDED = new Set(["TRANSFER_IN","TRANSFER_OUT","INCOME","LOAN_PAYMENTS"]);
+const GROUPS = [
+  {id:"groceries", label:"Groceries"},
+  {id:"dining", label:"Dining"},
+  {id:"rent", label:"Rent"},
+  {id:"home", label:"Home"},
+  {id:"utilities", label:"Utilities & phone"},
+  {id:"transport", label:"Transport"},
+  {id:"travel", label:"Travel"},
+  {id:"entertainment", label:"Entertainment"},
+  {id:"health", label:"Health & personal care"},
+  {id:"shopping", label:"Shopping"},
+  {id:"other", label:"Uncategorized"}
+];
+function groupOf(t){
+  if (S.catOverrides && S.catOverrides[t.id]) return S.catOverrides[t.id];
+  if (S.merchantCat && S.merchantCat[t.merchant]) return S.merchantCat[t.merchant];
+  if (isXferLike(t)){ const rk = payeeKey(t), rc = rk && (S.recipientChoice || {})[rk]; if (rc && rc.cat) return rc.cat; }
+  if (t.det === "FOOD_AND_DRINK_GROCERIES") return "groceries";
+  if (t.det === "RENT_AND_UTILITIES_RENT") return "rent";
+  switch (t.cat){
+    case "FOOD_AND_DRINK": return "dining";
+    case "HOME_IMPROVEMENT": return "home";
+    case "RENT_AND_UTILITIES": return "utilities";
+    case "TRANSPORTATION": return "transport";
+    case "TRAVEL": return "travel";
+    case "ENTERTAINMENT": return "entertainment";
+    case "MEDICAL": case "PERSONAL_CARE": return "health";
+    case "GENERAL_MERCHANDISE": return "shopping";
+    default: return "other";
+  }
+}
+const groupLabel = id => (GROUPS.find(g => g.id === id) || {label:id}).label;
+const BASE_GROUPS = GROUPS.slice();
+function syncGroups(){ GROUPS.length = 0; BASE_GROUPS.forEach(g => GROUPS.push(g)); (S.customGroups || []).forEach(g => GROUPS.push(g)); }
+
+/* ---------- placeholder model (replace with exported model.json) ---------- */
+const PLACEHOLDER_MODEL = {
+  version: "placeholder",
+  intercept: -2.4,
+  coef: {
+    "det=FOOD_AND_DRINK_GROCERIES": 3.2, "det=FOOD_AND_DRINK_RESTAURANT": -0.6,
+    "det=FOOD_AND_DRINK_COFFEE": -2.2, "det=FOOD_AND_DRINK_FAST_FOOD": -1.5,
+    "det=RENT_AND_UTILITIES_INTERNET_AND_CABLE": 3.4, "det=RENT_AND_UTILITIES_GAS_AND_ELECTRICITY": 3.6,
+    "det=RENT_AND_UTILITIES_TELEPHONE": 3.0, "det=HOME_IMPROVEMENT_FURNITURE": 2.4,
+    "det=HOME_IMPROVEMENT_HARDWARE": 1.8, "det=GENERAL_MERCHANDISE_SUPERSTORES": 1.0,
+    "det=GENERAL_MERCHANDISE_ONLINE_MARKETPLACES": 0.6, "det=MEDICAL_PHARMACIES_AND_SUPPLEMENTS": 0.2,
+    "det=GENERAL_MERCHANDISE_CLOTHING_AND_ACCESSORIES": -2.0, "det=TRANSPORTATION_TAXIS_AND_RIDE_SHARES": -0.8,
+    "det=TRANSPORTATION_PUBLIC_TRANSIT": -2.5, "det=TRANSPORTATION_GAS": -0.4,
+    "det=ENTERTAINMENT_TV_AND_MOVIES": 1.8, "det=ENTERTAINMENT_MUSIC_AND_AUDIO": 1.2,
+    "det=PERSONAL_CARE_HAIR_AND_BEAUTY": -2.2, "det=PERSONAL_CARE_GYMS_AND_FITNESS_CENTERS": -2.5,
+    "cat=FOOD_AND_DRINK": 0.2, "cat=HOME_IMPROVEMENT": 0.5, "cat=RENT_AND_UTILITIES": 0.6,
+    "cat=TRANSPORTATION": -0.4, "cat=PERSONAL_CARE": -0.6, "cat=ENTERTAINMENT": 0.2,
+    "merchant=Trader Joe's": 1.2, "merchant=Whole Foods": 0.8, "merchant=Star Market": 1.0,
+    "merchant=Uber Eats": 0.5, "merchant=DoorDash": 0.4, "merchant=Amazon": -0.6,
+    "merchant=Target": -0.3, "merchant=Blue Bottle Coffee": -0.5, "merchant=Costco": 0.6,
+    "log_amount": 0.9
+  },
+  scaler: { log_amount: { mean: 3.2, scale: 1.0 } },
+  band: { low: 0.2, high: 0.7 },
+  learning: { lr: 1.0, lambda: 0.01, categoryFactor: 0.5, maxStep: 1.5 }
+};
+
+/* ---------- synthetic data ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const SAMPLE_ME = [
+  ["Trader Joe's","FOOD_AND_DRINK","FOOD_AND_DRINK_GROCERIES",4,48,18],
+  ["Whole Foods","FOOD_AND_DRINK","FOOD_AND_DRINK_GROCERIES",1.5,62,20],
+  ["Formaggio Kitchen","FOOD_AND_DRINK","FOOD_AND_DRINK_GROCERIES",0.6,24,14],
+  ["Blue Bottle Coffee","FOOD_AND_DRINK","FOOD_AND_DRINK_COFFEE",7,6.5,1.5],
+  ["Sweetgreen","FOOD_AND_DRINK","FOOD_AND_DRINK_RESTAURANT",4,17,3],
+  ["Uber Eats","FOOD_AND_DRINK","FOOD_AND_DRINK_RESTAURANT",3,48,30],
+  ["Amazon","GENERAL_MERCHANDISE","GENERAL_MERCHANDISE_ONLINE_MARKETPLACES",3,52,40],
+  ["Target","GENERAL_MERCHANDISE","GENERAL_MERCHANDISE_SUPERSTORES",1.5,40,25],
+  ["CVS","MEDICAL","MEDICAL_PHARMACIES_AND_SUPPLEMENTS",1.2,18,8],
+  ["Xfinity","RENT_AND_UTILITIES","RENT_AND_UTILITIES_INTERNET_AND_CABLE",-1,80,0],
+  ["IKEA","HOME_IMPROVEMENT","HOME_IMPROVEMENT_FURNITURE",0.3,140,60],
+  ["Uber","TRANSPORTATION","TRANSPORTATION_TAXIS_AND_RIDE_SHARES",3,19,8],
+  ["MBTA","TRANSPORTATION","TRANSPORTATION_PUBLIC_TRANSIT",-1,90,0],
+  ["Zara","GENERAL_MERCHANDISE","GENERAL_MERCHANDISE_CLOTHING_AND_ACCESSORIES",0.6,70,25],
+  ["Netflix","ENTERTAINMENT","ENTERTAINMENT_TV_AND_MOVIES",-1,15.49,0],
+  ["Sephora","PERSONAL_CARE","PERSONAL_CARE_HAIR_AND_BEAUTY",0.5,45,15]
+];
+const SAMPLE_PARTNER = [
+  ["Star Market","FOOD_AND_DRINK","FOOD_AND_DRINK_GROCERIES",3,55,20],
+  ["Brothers Market","FOOD_AND_DRINK","FOOD_AND_DRINK_GROCERIES",1,22,10],
+  ["Costco","GENERAL_MERCHANDISE","GENERAL_MERCHANDISE_SUPERSTORES",0.7,160,50],
+  ["Eversource","RENT_AND_UTILITIES","RENT_AND_UTILITIES_GAS_AND_ELECTRICITY",-1,95,20],
+  ["Spotify","ENTERTAINMENT","ENTERTAINMENT_MUSIC_AND_AUDIO",-1,16.99,0],
+  ["Home Depot","HOME_IMPROVEMENT","HOME_IMPROVEMENT_HARDWARE",0.5,60,30],
+  ["Wayfair","HOME_IMPROVEMENT","HOME_IMPROVEMENT_FURNITURE",0.3,120,40],
+  ["Dunkin'","FOOD_AND_DRINK","FOOD_AND_DRINK_COFFEE",6,5,1.5],
+  ["Chipotle","FOOD_AND_DRINK","FOOD_AND_DRINK_FAST_FOOD",3,14,3],
+  ["DoorDash","FOOD_AND_DRINK","FOOD_AND_DRINK_RESTAURANT",2,45,22],
+  ["Shell","TRANSPORTATION","TRANSPORTATION_GAS",2,48,10],
+  ["Amazon","GENERAL_MERCHANDISE","GENERAL_MERCHANDISE_ONLINE_MARKETPLACES",2,38,30],
+  ["Walgreens","MEDICAL","MEDICAL_PHARMACIES_AND_SUPPLEMENTS",1,22,10],
+  ["Planet Fitness","PERSONAL_CARE","PERSONAL_CARE_GYMS_AND_FITNESS_CENTERS",-1,25,0]
+];
+function makeSample(owner, templates, seed){
+  const rnd = mulberry32(seed);
+  const out = [];
+  const months = [[2026,6,30],[2026,7,31],[2026,8,31],[2026,9,30],[2026,10,31],[2026,11,13]];
+  let n = 0;
+  months.forEach(([y,m,lastDay]) => {
+    templates.forEach(([merchant,cat,det,freq,mean,sd]) => {
+      let count;
+      if (freq < 0) count = (m === 11 && lastDay < 15) ? (rnd() < 0.5 ? 1 : 0) : 1;
+      else { count = Math.floor(freq * lastDay / 30); if (rnd() < (freq * lastDay / 30) % 1) count++; }
+      for (let i = 0; i < count; i++){
+        const day = 1 + Math.floor(rnd() * lastDay);
+        let amt = mean + sd * ((rnd() + rnd() + rnd()) - 1.5) * 1.6;
+        amt = Math.max(2.5, Math.round(amt * 100) / 100);
+        out.push({
+          id: owner + "-s" + (n++),
+          owner, merchant, cat, det, amount: amt,
+          date: y + "-" + String(m).padStart(2,"0") + "-" + String(day).padStart(2,"0")
+        });
+      }
+    });
+  });
+  return out.sort((a,b) => a.date < b.date ? 1 : -1);
+}
+
+/* ---------- state ---------- */
+const deepCopy = o => JSON.parse(JSON.stringify(o));
+const defaultState = (seed) => ({
+  names: { me: "Jordan", partner: "Alex" },
+  splitMe: 70,
+  viewer: "me",
+  tab: "home",
+  month: null,
+  historyGroup: "all",
+  source: { me: "sample", partner: "sample" },
+  tx: {
+    me: makeSample("me", SAMPLE_ME, seed ? seed : 7).concat([{ id: "me-v1", owner: "me", merchant: "Venmo", cat: "TRANSFER_OUT", det: "TRANSFER_OUT_ACCOUNT_TRANSFER", amount: 150, date: "2026-11-03" },
+      { id: "me-z1", owner: "me", merchant: "Zelle Back Bay Rentals", cat: "TRANSFER_OUT", det: "TRANSFER_OUT_ACCOUNT_TRANSFER", amount: 1400, date: "2026-11-01" },
+      { id: "me-v2", owner: "me", merchant: "Venmo", cat: "TRANSFER_OUT", det: "TRANSFER_OUT_ACCOUNT_TRANSFER", amount: 42, date: "2026-11-08" }]),
+    partner: makeSample("partner", SAMPLE_PARTNER, seed ? seed + 14 : 21).concat([{ id: "partner-v1", owner: "partner", merchant: "Venmo", cat: "TRANSFER_IN", det: "TRANSFER_IN_ACCOUNT_TRANSFER", amount: -150, date: "2026-11-04" }])
+  },
+  userLabels: {},
+  baseModel: deepCopy(PLACEHOLDER_MODEL),
+  model: deepCopy(PLACEHOLDER_MODEL)
+});
+let S = load() || defaultState();
+function load(){
+  try { const raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : null; }
+  catch(e){ return null; }
+}
+function save(){
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e){ /* storage full or unavailable */ }
+}
+
+/* ---------- model ---------- */
+const sigmoid = z => 1 / (1 + Math.exp(-z));
+function zAmount(m, t){
+  const sc = (m.scaler && m.scaler.log_amount) || {mean:0, scale:1};
+  return (Math.log1p(Math.max(t.amount, 0)) - sc.mean) / (sc.scale || 1);
+}
+function score(t, m){
+  m = m || S.model;
+  const c = m.coef;
+  const wm = c["merchant=" + t.merchant];
+  const we = c["emb=" + t.merchant];          // precomputed embedding effect, known merchants only
+  const wd = c["det=" + t.det] || 0;
+  const wc = c["cat=" + t.cat] || 0;
+  const wch = c["channel=" + t.channel] || 0;
+  const za = zAmount(m, t);
+  const wa = (c["log_amount"] || 0) * za;
+  const merch = (wm === undefined && we === undefined) ? undefined : (wm || 0) + (we || 0);
+  const z = m.intercept + (merch || 0) + wd + wc + wch + wa;
+  return { p: sigmoid(z), merchant: merch, category: wd + wc, amount: wa, za };
+}
+function status(t){
+  const u = S.userLabels[t.id];
+  const sc = score(t);
+  if (u === true || u === false) return { kind: u ? "shared" : "solo", source: "you", p: sc.p };
+  const band = S.model.band || {low:0.2, high:0.7};
+  if (sc.p >= band.high) return { kind: "shared", source: "auto", p: sc.p };
+  if (sc.p <= band.low) return { kind: "solo", source: "auto", p: sc.p };
+  return { kind: "review", source: "model", p: sc.p };
+}
+function prettyDet(t){
+  let s = t.det || t.cat || "Other";
+  if (t.cat && s.startsWith(t.cat + "_")) s = s.slice(t.cat.length + 1);
+  s = s.toLowerCase().replace(/_/g, " ");
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function reasons(t){
+  const sc = score(t);
+  const out = [];
+  const cat = prettyDet(t).toLowerCase();
+  if (sc.merchant === undefined) out.push({w: 0.01, text: "First time at " + t.merchant + ", so it’s judged by its category"});
+  else if (Math.abs(sc.merchant) > 0.15) out.push({w: Math.abs(sc.merchant), text: sc.merchant > 0 ? "You often share purchases at " + t.merchant : "Purchases at " + t.merchant + " are usually just yours"});
+  if (Math.abs(sc.category) > 0.15) out.push({w: Math.abs(sc.category), text: sc.category > 0 ? "Usually shared: " + cat : "Usually just yours: " + cat});
+  if (Math.abs(sc.amount) > 0.3) out.push({w: Math.abs(sc.amount), text: sc.amount > 0 ? "Larger than a typical solo purchase" : "Small amount"});
+  return out.sort((a,b) => b.w - a.w).slice(0, 2).map(r => r.text);
+}
+/* One gradient step on the merchant and category weights only.
+   Intercept and amount weights stay fixed until the next full retrain in Python. */
+function learn(t, y){
+  const m = S.model;
+  const L = m.learning || PLACEHOLDER_MODEL.learning;
+  const before = score(t).p;
+  const err = before - y;
+  const step = (key, factor) => {
+    const w = m.coef[key] || 0;
+    let d = L.lr * factor * (err + L.lambda * w);
+    d = Math.max(-L.maxStep, Math.min(L.maxStep, d));
+    m.coef[key] = Math.round((w - d) * 1e6) / 1e6;
+  };
+  step("merchant=" + t.merchant, 1);
+  if (t.det) step("det=" + t.det, L.categoryFactor);
+  if (t.cat) step("cat=" + t.cat, L.categoryFactor);
+  return { before, after: score(t).p };
+}
+
+/* ---------- derived numbers ---------- */
+const other = v => v === "me" ? "partner" : "me";
+const nameOf = v => S.names[v];
+const pctOf = v => v === "me" ? S.splitMe : 100 - S.splitMe;
+const spend = list => list.filter(t => !EXCLUDED.has(t.cat) || transferIsPurchase(t));
+/* Venmo, Zelle and other transfers: the person decides whether each is a purchase, a payment to their partner, or ignorable. */
+const GENERIC_PAYEES = ["venmo", "zelle", "paypal", "cash app", "cashapp", "transfer", "online transfer"];
+function payeeKey(t){ const k = String(t.merchant).trim().toLowerCase(); return (GENERIC_PAYEES.includes(k) || k.length < 3) ? null : k; }
+function transferDecision(t){
+  if (!isXferLike(t)) return null;
+  const c = (S.transferChoice || {})[t.id]; if (c) return c;
+  const k = payeeKey(t), r = k && (S.recipientChoice || {})[k];
+  return r ? r.kind : null;
+}
+/* Outgoing transfers count as spending (Uncategorized until sorted) unless ignored or counted as a payment to the partner. */
+let CAND_IDS = null;
+function candIds(){ if (!CAND_IDS){ CAND_IDS = new Set(); settlementCandidates().forEach(c => c.txIds.forEach(id => CAND_IDS.add(id))); } return CAND_IDS; }
+/* Outgoing transfers count as spending; incoming ones (someone paying you back) count as negative spending. Either can be ignored. */
+function transferIsPurchase(t){ return isXferLike(t) && t.amount !== 0 && transferDecision(t) !== "ignore" && !inSettlement(t.id); }
+const inSettlement = id => (S.settlements || []).some(s => (s.txIds || []).includes(id));
+function pendingTransfers(v, ym){
+  const candIds = new Set(); settlementCandidates().forEach(c => c.txIds.forEach(id => candIds.add(id)));
+  return S.tx[v].filter(t => TRANSFER_CATS.has(t.cat) && t.amount > 0 && !transferDecision(t) && !inSettlement(t.id) && !candIds.has(t.id) && (!ym || t.date.slice(0,7) === ym))
+    .sort((a,b) => a.date < b.date ? 1 : -1);
+}
+const inMonth = (list, ym) => list.filter(t => t.date.slice(0,7) === ym);
+function allMonths(){
+  const set = new Set();
+  ["me","partner"].forEach(v => spend(S.tx[v]).forEach(t => set.add(t.date.slice(0,7))));
+  return [...set].sort();
+}
+function ownerPct(t){ const o = S.splitOverrides ? S.splitOverrides[t.id] : undefined; return (typeof o === "number") ? o : pctOf(t.owner); }
+function shareOf(t, v){ return t.amount * (t.owner === v ? ownerPct(t) : 100 - ownerPct(t)) / 100; }
+const TRANSFER_CATS = new Set(["TRANSFER_IN","TRANSFER_OUT"]);
+/* Payment-app transfers, even when Plaid files them under another excluded category (income, loan payments) or none. */
+const isXferLike = t => TRANSFER_CATS.has(t.cat) || ((!t.cat || EXCLUDED.has(t.cat)) && /\b(zelle|venmo|paypal|cash ?app)\b/i.test(String(t.merchant)));
+const dayDiff = (a, b) => (new Date(a) - new Date(b)) / 86400000;
+const firstName = v => String(nameOf(v)).trim().split(/\s+/)[0].toLowerCase();
+/* Transfers between the two people, found in both connected accounts (Venmo, Zelle, bank transfers). */
+function settlementCandidates(){
+  const done = new Set(); (S.settlements || []).forEach(s => (s.txIds || []).forEach(id => done.add(id)));
+  const dis = S.dismissed || {};
+  const out = [];
+  ["me","partner"].forEach(payer => {
+    const payee = other(payer);
+    const usable = t => isXferLike(t) && !done.has(t.id) && !dis[t.id] && !transferDecision(t);
+    const outs = S.tx[payer].filter(t => usable(t) && t.amount > 0);
+    const ins = S.tx[payee].filter(t => usable(t) && t.amount < 0);
+    outs.forEach(t => {
+      const mi = ins.findIndex(u => Math.abs(Math.abs(u.amount) - t.amount) < 0.01 && Math.abs(dayDiff(u.date, t.date)) <= 3);
+      const named = firstName(payee).length > 1 && t.merchant.toLowerCase().includes(firstName(payee));
+      if (mi >= 0 || named){
+        const m = mi >= 0 ? ins.splice(mi, 1)[0] : null;
+        out.push({ from: payer, to: payee, amount: t.amount, date: t.date, txIds: m ? [t.id, m.id] : [t.id], via: t.merchant });
+      }
+    });
+    ins.forEach(u => {
+      if (firstName(payer).length > 1 && u.merchant.toLowerCase().includes(firstName(payer)))
+        out.push({ from: payer, to: payee, amount: Math.abs(u.amount), date: u.date, txIds: [u.id], via: u.merchant });
+    });
+  });
+  return out.sort((a,b) => a.date < b.date ? 1 : -1);
+}
+const candidatesFor = v => settlementCandidates().filter(c => c.from === v || c.to === v);
+const monthSettlements = (v, ym) => (S.settlements || []).filter(s => s.date.slice(0,7) === ym && (s.from === v || s.to === v));
+/* Positive: the other person owes v. Shared costs across every month, adjusted for payments between them. */
+function balanceFor(v){
+  let b = 0;
+  allMonths().forEach(ym => { b += monthSummary(v, ym).net; });
+  (S.settlements || []).forEach(s => { if (s.from === v) b += s.amount; else if (s.to === v) b -= s.amount; });
+  return b;
+}
+function monthSummary(v, ym){
+  const o = other(v);
+  const mine = spend(inMonth(S.tx[v], ym));
+  const theirs = spend(inMonth(S.tx[o], ym));
+  let card = 0, solo = 0, sharedMine = 0, sharedTheirs = 0, reviewAmt = 0, reviewN = 0, myShare = 0;
+  const byGroup = {}; GROUPS.forEach(g => byGroup[g.id] = {ind:0, sh:0});
+  mine.forEach(t => {
+    const st = status(t); card += t.amount;
+    const g = groupOf(t);
+    if (st.kind === "shared"){ const s = shareOf(t, v); sharedMine += t.amount; myShare += s; byGroup[g].sh += s; }
+    else { solo += t.amount; byGroup[g].ind += t.amount; if (st.kind === "review"){ reviewAmt += t.amount; reviewN++; } }
+  });
+  theirs.forEach(t => {
+    if (status(t).kind === "shared"){ const s = shareOf(t, v); sharedTheirs += t.amount; myShare += s; byGroup[groupOf(t)].sh += s; }
+  });
+  const sharedTotal = sharedMine + sharedTheirs;
+  return { card, solo, sharedMine, sharedTheirs, sharedTotal, myShare,
+    real: solo + myShare, net: sharedMine - myShare, byGroup, reviewAmt, reviewN };
+}
+function reviewQueue(v){
+  return spend(S.tx[v]).map(t => ({t, st: status(t)}))
+    .filter(x => x.st.kind === "review")
+    .sort((a,b) => (b.t.amount * (1 - Math.abs(2*b.st.p - 1))) - (a.t.amount * (1 - Math.abs(2*a.st.p - 1))));
+}
+
+/* ---------- formatting ---------- */
+const fmt0 = new Intl.NumberFormat("en-US", {style:"currency", currency:"USD", maximumFractionDigits:0});
+const fmt2 = new Intl.NumberFormat("en-US", {style:"currency", currency:"USD", minimumFractionDigits:2, maximumFractionDigits:2});
+const money = n => fmt0.format(Math.round(n));
+const money2 = n => fmt2.format(n);
+const pctTxt = (a, b) => b > 0 ? Math.round(100 * a / b) + "%" : "0%";
+function monthName(ym, short){
+  const [y,m] = ym.split("-").map(Number);
+  return new Date(y, m-1, 1).toLocaleDateString("en-US", short ? {month:"short"} : {month:"long", year:"numeric"});
+}
+function dayName(d){
+  const [y,m,dd] = d.split("-").map(Number);
+  return new Date(y, m-1, dd).toLocaleDateString("en-US", {month:"short", day:"numeric"});
+}
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+
+
+/* ---------- icons ---------- */
+const svg = (d, extra) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra||""}>${d}</svg>`;
+const ICON = {
+  home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  review: '<rect x="6" y="3" width="12" height="16" rx="2.5"/><path d="M3.5 7.5v11A2.5 2.5 0 0 0 6 21h9"/>',
+  activity: '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>',
+  settings: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  chevL: '<path d="m15 18-6-6 6-6"/>',
+  chevR: '<path d="m9 18 6-6-6-6"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  ask: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17h0"/>',
+  done: '<path d="M20 6 9 17l-5-5"/>',
+  groceries: '<path d="M3 4h2l2.3 10.4a1 1 0 0 0 1 .8h8.8a1 1 0 0 0 1-.8L20 8H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/>',
+  dining: '<path d="M7 3v8M4.5 3v4.5A2.5 2.5 0 0 0 7 10a2.5 2.5 0 0 0 2.5-2.5V3M7 11v10M17 21V3c-2.2 1.2-3.5 3.6-3.5 6.5V13H17"/>',
+  home2: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  utilities: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+  transport: '<path d="M5 17h14M6 17v2M18 17v2M5 17V11l2-5h10l2 5v6M5 11h14"/><circle cx="8" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/>',
+  health: '<path d="M19.5 12.6 12 20l-7.5-7.4A4.6 4.6 0 0 1 12 6.7a4.6 4.6 0 0 1 7.5 5.9z"/>',
+  shopping: '<path d="M6 7h12l-1 13.2a1 1 0 0 1-1 .8H8a1 1 0 0 1-1-.8z"/><path d="M9 7V6a3 3 0 0 1 6 0v1"/>',
+  other: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+  tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.2"/>',
+  swap: '<path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/>',
+  rent: '<circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.2-8.2M16 7l2.5 2.5M13.5 9.5 16 12"/>',
+  travel: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18"/>',
+  entertainment: '<circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.5 3.5-5.5 3.5z"/>'
+};
+const GROUP_STYLE = {
+  groceries: ["#14B88A","rgba(20,184,138,.14)","groceries"],
+  dining: ["#F97316","rgba(249,115,22,.14)","dining"],
+  rent: ["#0F766E","rgba(15,118,110,.14)","rent"],
+  travel: ["#06B6D4","rgba(6,182,212,.15)","travel"],
+  entertainment: ["#EF4444","rgba(239,68,68,.13)","entertainment"],
+  home: ["#8B5CF6","rgba(139,92,246,.14)","home2"],
+  utilities: ["#EAB308","rgba(234,179,8,.16)","utilities"],
+  transport: ["#0EA5E9","rgba(14,165,233,.14)","transport"],
+  health: ["#EC4899","rgba(236,72,153,.14)","health"],
+  shopping: ["#5B5BF6","rgba(91,91,246,.14)","shopping"],
+  other: ["#6B7280","rgba(107,114,128,.16)","other"]
+};
+const catIcon = id => { const s = GROUP_STYLE[id]; if (!s){ const c = logoColor(id); return `<span class="cic" style="background:color-mix(in srgb, ${c} 15%, transparent);color:${c}">${svg(ICON.tag)}</span>`; } return `<span class="cic" style="background:${s[1]};color:${s[0]}">${svg(ICON[s[2]])}</span>`; };
+const LOGO_COLORS = ["#5B5BF6","#14B88A","#F97316","#0EA5E9","#EC4899","#8B5CF6","#EF4444","#0F766E","#CA8A04","#334155"];
+function logoColor(name){ let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0; return LOGO_COLORS[h % LOGO_COLORS.length]; }
+const initial = s => (s.replace(/[^A-Za-z0-9]/g, "").charAt(0) || "?").toUpperCase();
+const logo = (name, cls) => `<span class="${cls}" style="background:${logoColor(name)}">${esc(initial(name))}</span>`;
+const splitMoney = n => { const s = money2(Math.abs(n)); const i = s.lastIndexOf("."); return {whole: (n < 0 ? "−" : "") + s.slice(0, i), cents: s.slice(i)}; };
+
+/* ---------- rendering ---------- */
+const app = document.getElementById("app");
+const tabsEl = document.getElementById("tabs");
+const overlay = document.getElementById("overlay");
+
+function ensureMonth(){
+  const ms = allMonths();
+  if (!ms.length){ S.month = null; return ms; }
+  if (!S.month || !ms.includes(S.month)) S.month = ms[ms.length - 1];
+  return ms;
+}
+
+function topBar(ms){
+  const i = ms.indexOf(S.month);
+  const showMonth = (S.tab === "home" || S.tab === "activity") && S.month;
+  return `<header class="top">
+    <div class="people" role="group" aria-label="Viewing as">
+      <button class="av me" data-act="viewer" data-v="me" aria-pressed="${S.viewer==="me"}" aria-label="View as ${esc(S.names.me)}">${esc(initial(S.names.me))}</button>
+      <button class="av partner" data-act="viewer" data-v="partner" aria-pressed="${S.viewer==="partner"}" aria-label="View as ${esc(S.names.partner)}">${esc(initial(S.names.partner))}</button>
+      <span class="viewing">${esc(nameOf(S.viewer))}</span>
+    </div>
+    ${showMonth ? `<div class="monthpill">
+      <button data-act="month" data-d="-1" aria-label="Previous month" ${i <= 0 ? "disabled" : ""}>${svg(ICON.chevL, 'width="18" height="18"')}</button>
+      <span>${monthName(S.month, true)} ${S.month.slice(0,4)}</span>
+      <button data-act="month" data-d="1" aria-label="Next month" ${i >= ms.length - 1 ? "disabled" : ""}>${svg(ICON.chevR, 'width="18" height="18"')}</button>
+    </div>` : ""}
+  </header>`;
+}
+
+function renderTabs(){
+  const n = reviewQueue(S.viewer).length;
+  const items = [["home","Home",ICON.home],["review","Review",ICON.review],["activity","Transactions",ICON.activity],["settings","Settings",ICON.settings]];
+  tabsEl.innerHTML = items.map(([id,label,ic]) =>
+    `<button data-act="tab" data-t="${id}" ${S.tab===id ? 'aria-current="page"' : ""}>${svg(ic)}${label}${id==="review" && n ? `<span class="badge">${n}</span>` : ""}</button>`
+  ).join("");
+}
+
+function renderHome(){
+  const v = S.viewer, o = other(v);
+  const x = monthSummary(v, S.month);
+  const oName = esc(nameOf(o));
+  const big = splitMoney(x.real);
+  let sub;
+  if (x.net > 0.5) sub = `Your card shows ${money(x.card)}. ${money(x.net)} of it covered ${oName}’s share.`;
+  else if (x.net < -0.5) sub = `Your card shows ${money(x.card)}, plus your ${money(-x.net)} share of what ${oName} paid.`;
+  else sub = `Your card shows ${money(x.card)}, and shared costs are even.`;
+  const tot = Math.max(x.real, 0.01);
+  const indW = Math.max(0, 100 * x.solo / tot), shW = Math.max(0, 100 * x.myShare / tot);
+
+  const hist = settleHistory(v), lastSettle = lastSettleDate();
+  const openOwed = (p, debtor) => { const l = paidItems(p).filter(t => !itemSettlement(t.id)); return { n: l.length, amt: l.reduce((a, t) => a + shareOf(t, debtor), 0) }; };
+  const owedToMe = openOwed(v, o), iOwe = openOwed(o, v);
+  const carried = hist.filter(h => h.carried).reduce((a, h) => a + h.delta, 0);
+  const bal = owedToMe.amt - iOwe.amt + carried;
+  let resultLabel, resultVal, resultColor;
+  if (bal > 0.5){ resultLabel = `${oName} owes you`; resultVal = money2(bal); resultColor = "var(--shared)"; }
+  else if (bal < -0.5){ resultLabel = `You owe ${oName}`; resultVal = money2(-bal); resultColor = "var(--ink)"; }
+  else { resultLabel = "You’re even"; resultVal = money2(0); resultColor = "var(--ink)"; }
+  const cands = candidatesFor(v), cand = cands[0];
+  const allPays = (S.settlements || []).filter(s => s.from === v || s.to === v).sort((a,b) => a.date < b.date ? 1 : -1);
+  const pays = allPays.filter(s => s.how !== "item");
+  const itemPaid = dir => { const l = allPays.filter(s => s.how === "item" && s.from === (dir ? v : o)); return { n: l.length, amt: l.reduce((a, s) => a + s.amount, 0) }; };
+  const ipMine = itemPaid(true), ipTheirs = itemPaid(false);
+  const openOf = p => { const l = paidItems(p).filter(t => !itemSettlement(t.id)); return { n: l.length, amt: l.reduce((a, t) => a + t.amount, 0) }; };
+  const allTime = { mine: openOf(v), theirs: openOf(o) };
+
+  const groups = GROUPS.map(g => ({...g, ...x.byGroup[g.id], total: x.byGroup[g.id].ind + x.byGroup[g.id].sh}))
+    .filter(g => Math.abs(g.total) >= 0.5).sort((a,b) => b.total - a.total);
+  const maxG = Math.max(1, ...groups.map(g => g.total));
+
+  return `
+  <section class="hero" aria-label="Summary">
+    <div class="k">Your real spending in ${monthName(S.month, true)}</div>
+    <div class="big num">${big.whole}<span class="cents">${big.cents}</span></div>
+    <div class="eq">
+      <div class="part"><b class="num">${money2(Math.round(x.solo*100)/100)}</b><span><i class="dot" style="background:#8C8CFF"></i>Your own purchases</span></div>
+      <div class="op" aria-hidden="true">+</div>
+      <div class="part"><b class="num">${money2(Math.round(x.real*100)/100 - Math.round(x.solo*100)/100)}</b><span><i class="dot" style="background:#35E0AC"></i>Your share of shared costs</span></div>
+    </div>
+    <div class="seg" aria-hidden="true" style="margin-bottom:2px"><span style="width:${indW}%;background:#8C8CFF"></span><span style="width:${shW}%;background:#35E0AC"></span></div>
+  </section>
+  ${reviewQueue(v).length ? `<div class="banner">
+    <span class="ic">${svg(ICON.ask, 'width="18" height="18"')}</span>
+    <span class="tx"><b>${reviewQueue(v).length} to review</b><span>${x.reviewN ? `${x.reviewN} from ${monthName(S.month, true)} (${money(x.reviewAmt)}), counted as just yours for now` : `None from ${monthName(S.month, true)}, all from other months`}</span></span>
+    <button class="pillbtn" data-act="tab" data-t="review">Review</button>
+  </div>` : ""}
+
+  <section class="sec">
+    <div class="sechead"><h2>Settle up</h2><span>${S.names.me} ${S.splitMe}%, ${S.names.partner} ${100-S.splitMe}%</span></div>
+    ${cands.map((cand, k) => `<div class="banner settlecand">
+      <span class="ic" style="background:var(--shared-soft);color:var(--shared)">${svg(ICON.swap, 'width="18" height="18"')}</span>
+      <span class="tx"><b>${cand.from === v ? `You paid ${oName}` : `${oName} paid you`} ${money2(cand.amount)}?</b><span>${dayName(cand.date)}, ${esc(cand.via)}. Count it toward settling up?</span></span>
+      <span class="cbtns"><button class="pillbtn" data-act="settleyes" data-k="${k}">Count it</button><button class="textbtn" data-act="settleno" data-k="${k}">Not a payment</button></span>
+    </div>`).join("")}
+    <div class="panel settle">
+      <div class="monlab">${lastSettle ? `Since you last settled up on ${dayName(lastSettle)}` : "Still open"}</div>
+      <button class="who2" data-act="paidlist" data-payer="${v}" aria-label="See what you paid for"><span class="mini" style="background:${v==="me"?"var(--you)":"var(--partner)"}">${esc(initial(nameOf(v)))}</span><span class="t">${oName} owes you<small>${oName}’s share of ${owedToMe.n} open purchase${owedToMe.n === 1 ? "" : "s"} you paid</small></span><span class="v num">${money2(owedToMe.amt)}</span><span class="chev">${svg(ICON.chevR, 'width="16" height="16"')}</span></button>
+      <button class="who2" data-act="paidlist" data-payer="${o}" aria-label="See what ${oName} paid for"><span class="mini" style="background:${o==="me"?"var(--you)":"var(--partner)"}">${esc(initial(nameOf(o)))}</span><span class="t">You owe ${oName}<small>Your share of ${iOwe.n} open purchase${iOwe.n === 1 ? "" : "s"} ${oName} paid</small></span><span class="v num">${money2(iOwe.amt)}</span><span class="chev">${svg(ICON.chevR, 'width="16" height="16"')}</span></button>
+      ${Math.abs(carried) >= 0.5 ? `<div class="who2"><span class="mini" style="background:var(--surface-2);color:var(--muted)">${svg(ICON.swap, 'width="16" height="16"')}</span><span class="t">${carried > 0 ? `${oName} still owed you` : `You still owed ${oName}`}<small>Carried over from earlier settle-ups</small></span><span class="v num">${money2(Math.abs(carried))}</span></div>` : ""}
+      <div class="result"><span class="t">Balance<b>${resultLabel}</b></span><span class="v num" style="color:${resultColor}">${resultVal}</span></div>
+    </div>
+    <div style="text-align:center;margin-top:10px"><button class="textbtn" style="width:auto;font-size:14px" data-act="recordpay">Record a payment</button></div>
+  </section>
+
+  <section class="sec">
+    <div class="sechead"><h2>Spending</h2><span>${money(x.real)} total</span></div>
+    <div class="tiles">
+      <div class="tile"><div class="t"><i class="dot" style="background:var(--you)"></i>Just you</div><div class="v num">${money(x.solo)}</div><div class="p">${pctTxt(x.solo, tot)} of total</div></div>
+      <div class="tile"><div class="t"><i class="dot" style="background:var(--shared)"></i>Shared</div><div class="v num">${money(x.myShare)}</div><div class="p">${pctTxt(x.myShare, tot)} of total</div></div>
+    </div>
+    <div class="panel">
+      ${groups.map(g => `<button class="row catrow" data-act="opencat" data-g="${g.id}" aria-label="See ${esc(g.label)} transactions for ${monthName(S.month, true)}">
+        ${catIcon(g.id)}
+        <div class="mid">
+          <div class="nm"><span>${g.label}</span><span class="num">${money(g.total)}</span></div>
+          <div class="thin" style="width:${Math.max(4, 100 * g.total / maxG)}%"><span style="flex:${Math.max(0,g.ind)};background:var(--you)"></span><span style="flex:${Math.max(0,g.sh)};background:var(--shared)"></span></div>
+          <div class="sm"><span>Just you ${money(g.ind)}</span><span>Shared ${money(g.sh)}</span></div>
+        </div>
+        <span class="chev">${svg(ICON.chevR, 'width="16" height="16"')}</span>
+      </button>`).join("") || `<div class="row muted">No spending this month.</div>`}
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sechead"><h2>Trend</h2><span>Last 6 months</span></div>
+    <div class="chips" role="group" aria-label="Category">
+      <button data-act="hgroup" data-g="all" aria-pressed="${S.historyGroup==="all"}">All</button>
+      ${GROUPS.map(g => `<button data-act="hgroup" data-g="${g.id}" aria-pressed="${S.historyGroup===g.id}">${g.label}</button>`).join("")}
+    </div>
+    <div class="chartbox">${historyChart(v)}
+      <div class="chartleg"><span><i class="dot" style="background:var(--you)"></i>Just you</span><span><i class="dot" style="background:var(--shared)"></i>Your share of shared</span></div>
+    </div>
+  </section>`;
+}
+
+function historyChart(v){
+  const ms = allMonths();
+  const end = ms.indexOf(S.month);
+  const sel = ms.slice(Math.max(0, end - 5), end + 1);
+  const data = sel.map(ym => {
+    const x = monthSummary(v, ym);
+    if (S.historyGroup === "all") return {ym, ind: x.solo, sh: x.myShare};
+    const g = x.byGroup[S.historyGroup]; return {ym, ind: g.ind, sh: g.sh};
+  });
+  const max = Math.max(1, ...data.map(d => Math.max(0, d.ind) + Math.max(0, d.sh)));
+  const W = 400, H = 190, top = 22, bottom = 24, n = data.length;
+  const slot = W / Math.max(n, 1), bw = Math.min(36, slot * 0.5);
+  const h = val => Math.max(0, val) / max * (H - top - bottom);
+  let out = "";
+  [0.5, 1].forEach(f => { const y = H - bottom - f * (H - top - bottom); out += `<line x1="0" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-dasharray="3 4"/>`; });
+  data.forEach((d, i) => {
+    const x = i * slot + (slot - bw) / 2, yB = H - bottom;
+    const hi = h(d.ind), hs = h(d.sh), cur = d.ym === S.month, tot = hi + hs, r = Math.min(7, bw / 2);
+    if (tot > 0){
+      out += `<clipPath id="bar${i}"><rect x="${x}" y="${yB - tot}" width="${bw}" height="${tot + r}" rx="${r}"/></clipPath>`;
+      out += `<g clip-path="url(#bar${i})" opacity="${cur ? 1 : 0.8}">`;
+      if (hi > 0) out += `<rect x="${x}" y="${yB - hi}" width="${bw}" height="${hi}" fill="var(--you)"/>`;
+      if (hs > 0) out += `<rect x="${x}" y="${yB - tot}" width="${bw}" height="${hs}" fill="var(--shared)"/>`;
+      if (hi > 0 && hs > 0) out += `<line x1="${x}" x2="${x + bw}" y1="${yB - hi}" y2="${yB - hi}" stroke="var(--surface)" stroke-width="1.5"/>`;
+      out += `</g>`;
+    }
+    out += `<text x="${x + bw/2}" y="${yB - tot - 7}" text-anchor="middle" font-size="11" font-weight="${cur?700:500}" fill="${cur?"var(--ink)":"var(--faint)"}" font-family="Inter, sans-serif">${money(d.ind + d.sh)}</text>`;
+    out += `<text x="${x + bw/2}" y="${H - 5}" text-anchor="middle" font-size="12" font-weight="${cur?700:500}" fill="${cur?"var(--ink)":"var(--faint)"}" font-family="Inter, sans-serif">${monthName(d.ym, true)}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Monthly spending split into just you and your share of shared costs">${out}</svg>`;
+}
+
+let reviewIdx = 0;
+function clampIdx(n){ if (!n) return 0; if (reviewIdx >= n || reviewIdx < 0) reviewIdx = ((reviewIdx % n) + n) % n; return reviewIdx; }
+function renderReview(){
+  const q = reviewQueue(S.viewer);
+  const idx = clampIdx(q.length), cur = q[idx], nxt = q.length > 1 ? q[(idx + 1) % q.length] : null;
+  if (!q.length) return `<div class="pagetitle">Review</div><div class="empty"><div class="ic">${svg(ICON.done, 'width="30" height="30"')}</div><h3>All caught up</h3><p>Purchases the app isn’t sure about will show up here.</p></div>`;
+  const cardHTML = (item, cls) => {
+    const t = item.t, p = Math.round(item.st.p * 100);
+    return `<div class="card ${cls}" ${cls==="top" ? `id="topcard" tabindex="0" aria-label="${esc(t.merchant)}, ${money2(t.amount)}. Left arrow for just me, right arrow for shared, down arrow to skip, up arrow to go back."` : 'aria-hidden="true"'}>
+      <div class="stamp so">Just me</div><div class="stamp sh">Shared</div>
+      <div class="merchant">${esc(t.merchant)}</div>
+      <div class="meta">${dayName(t.date)}</div>
+      <button class="catchip" data-act="recat" data-id="${esc(t.id)}" aria-label="Category: ${groupLabel(groupOf(t))}. Change category">${catIcon(groupOf(t))}<span>${groupLabel(groupOf(t))}</span>${svg(ICON.chevR, 'width="14" height="14" style="transform:rotate(90deg)"')}</button>
+      <div class="amount num">${money2(t.amount)}</div>
+      <div class="gauge">
+        <div class="lab"><span>Chance it’s shared</span><b>${p}%</b></div>
+        <div class="track"><span style="width:${p}%"></span></div>
+        <div class="reasons">${reasons(t).map(r => `<span>${esc(r)}</span>`).join("")}</div>
+      </div>
+    </div>`;
+  };
+  return `
+  <div class="pagetitle">Was this shared?</div>
+  <p class="progress">${q.length} left. Swipe right if shared, left if it was just you.</p>
+  <div class="deck">
+    ${nxt ? cardHTML(nxt, "under") : ""}
+    ${cardHTML(cur, "top")}
+  </div>
+  <div class="skiprow">
+    <button class="navbtn" data-act="revnav" data-d="-1" aria-label="Go back to the previous purchase" ${q.length < 2 ? "disabled" : ""}>${svg(ICON.chevR, 'width="14" height="14" style="transform:rotate(180deg)"')}Back</button>
+    <span class="pos">${idx + 1} of ${q.length}</span>
+    <button class="navbtn" data-act="revnav" data-d="1" aria-label="Skip this purchase for now" ${q.length < 2 ? "disabled" : ""}>Skip${svg(ICON.chevR, 'width="14" height="14"')}</button>
+  </div>
+  <div class="decide">
+    <button class="so" data-act="decide" data-y="0"><span class="circ">${svg(ICON.x)}</span>Just me</button>
+    <button class="sh" data-act="decide" data-y="1"><span class="circ">${svg(ICON.check)}</span>Shared</button>
+  </div>
+  <div style="text-align:center;margin-top:14px"><button class="textbtn" style="width:auto;font-size:14px" data-act="decidecustom">Shared, but split differently</button></div>`;
+}
+
+function stLine(st){
+  if (st.kind === "review") return `<span class="st" style="color:var(--warn)"><i style="background:var(--warn)"></i>Needs review</span>`;
+  const c = st.kind === "shared" ? "var(--shared)" : "var(--you)";
+  return `<span class="st"><i style="background:${c}"></i>${st.kind === "shared" ? "Shared" : "Just you"}${st.source === "auto" ? " (auto)" : ""}</span>`;
+}
+
+function renderActivity(){
+  const v = S.viewer, o = other(v);
+  const allMine = spend(inMonth(S.tx[v], S.month));
+  const allTheirs = spend(inMonth(S.tx[o], S.month)).filter(t => status(t).kind === "shared");
+  const present = new Set([...allMine, ...allTheirs].map(groupOf));
+  if (S.txGroup && S.txGroup !== "all" && !present.has(S.txGroup)) S.txGroup = "all";
+  const sel = S.txGroup || "all";
+  const keep = t => sel === "all" || groupOf(t) === sel;
+  const mine = allMine.filter(keep).sort((a,b) => a.date < b.date ? 1 : -1);
+  const theirs = allTheirs.filter(keep).sort((a,b) => a.date < b.date ? 1 : -1);
+  const filterChips = `<div class="chips" role="group" aria-label="Filter by category">
+    <button data-act="txgroup" data-g="all" aria-pressed="${sel === "all"}">All</button>
+    ${GROUPS.filter(g => present.has(g.id)).map(g => `<button data-act="txgroup" data-g="${g.id}" aria-pressed="${sel === g.id}">${esc(g.label)}</button>`).join("")}
+  </div>`;
+  const total = mine.reduce((s, t) => s + t.amount, 0);
+  const feed = mine.concat(theirs).sort((a,b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+  let lastDay = "", rows = "";
+  feed.forEach(t => {
+    if (t.date !== lastDay){ rows += `<li class="daylab">${dayName(t.date)}</li>`; lastDay = t.date; }
+    if (t.owner === o){
+      rows += `<li><div class="txrow" style="cursor:default">
+      <span class="lwrap">${logo(t.merchant, "mlogo")}<span class="pbadge" style="background:${o === "me" ? "var(--you)" : "var(--partner)"}" aria-hidden="true">${esc(initial(nameOf(o)))}</span></span>
+      <span class="mid"><div class="nm">${esc(t.merchant)}</div><span class="pchip"${o === "me" ? ' style="color:var(--you);background:var(--you-soft)"' : ""}>Shared by ${esc(nameOf(o))}, ${esc(groupLabel(groupOf(t)))}</span></span>
+      <span class="rt"><div class="amt num">${money2(t.amount)}</div><span class="st">Your share ${money2(shareOf(t, v))}${typeof (S.splitOverrides||{})[t.id] === "number" ? " (custom)" : ""}</span></span>
+    </div></li>`;
+      return;
+    }
+    rows += `<li><div class="txrow" data-act="open" data-id="${esc(t.id)}">
+      ${logo(t.merchant, "mlogo")}
+      <span class="mid"><button class="nmbtn" data-act="open" data-id="${esc(t.id)}">${esc(t.merchant)}</button><button class="minichip" data-act="recat" data-id="${esc(t.id)}" aria-label="Category: ${esc(groupLabel(groupOf(t)))}. Change category">${esc(groupLabel(groupOf(t)))}${svg(ICON.chevR, 'width="12" height="12" style="transform:rotate(90deg)"')}</button></span>
+      <span class="rt"><div class="amt num">${money2(t.amount)}</div>${stLine(status(t))}</span>
+    </div></li>`;
+  });
+  return `
+  <div class="pagetitle">Transactions</div>
+  ${filterChips}
+  <div class="sechead"><h2>${sel === "all" ? "All transactions" : esc(groupLabel(sel))}</h2><span>${mine.length} on your card${theirs.length ? `, ${theirs.length} shared by ${esc(nameOf(o))}` : ""}</span></div>
+  <div class="panel">${feed.length ? `<ul class="txlist">${rows}</ul>` : `<div class="row muted">${sel === "all" ? "No purchases this month." : "No purchases in this category this month."}</div>`}</div>
+  <p class="foot" style="margin-top:8px"><span class="pchip" style="margin:0 4px 0 0${o === "me" ? ";color:var(--you);background:var(--you-soft)" : ""}">Shared by ${esc(nameOf(o))}</span>marks purchases ${esc(nameOf(o))} paid for and shared. ${esc(nameOf(o))}’s other purchases stay private.</p>`;
+}
+
+function renderSettings(){
+  const m = S.model;
+  return `
+  <div class="pagetitle">Settings</div>
+  <div class="grouplab">People</div>
+  <div class="group">
+    <label class="item"><span class="t">Person 1</span><input type="text" value="${esc(S.names.me)}" data-act="name" data-v="me" maxlength="20" aria-label="Person 1 name"></label>
+    <label class="item"><span class="t">Person 2</span><input type="text" value="${esc(S.names.partner)}" data-act="name" data-v="partner" maxlength="20" aria-label="Person 2 name"></label>
+  </div>
+
+  <div class="grouplab">How you split shared costs</div>
+  <div class="group"><div class="item stack">
+    <div class="splitwrap">
+    <div class="splitview" id="splitview"><span style="width:${S.splitMe}%;background:var(--you)">${S.splitMe >= 15 ? `${esc(S.names.me)} ${S.splitMe}%` : ""}</span><span style="width:${100-S.splitMe}%;background:var(--partner)">${100-S.splitMe >= 15 ? `${esc(S.names.partner)} ${100-S.splitMe}%` : ""}</span></div>
+    <input class="splitrange" type="range" min="0" max="100" step="5" value="${S.splitMe}" data-act="split" aria-label="Share paid by ${esc(S.names.me)}">
+    </div>
+    <div class="ends" style="margin-top:6px"><span>Drag the handle to change the split</span></div>
+  </div></div>
+
+  <div class="grouplab">Review</div>
+  <div class="group"><div class="item stack">
+    <div class="t">Ask me when there’s at least a <b id="thbig">${Math.round(m.band.low*100)}%</b> chance a purchase is shared</div>
+    <input type="range" min="0.05" max="0.5" step="0.05" value="${m.band.low}" data-act="band" aria-label="Chance of being shared that triggers a review">
+    <div class="ends"><span>Ask more</span><span>Ask less</span></div>
+    <div class="preview" id="thq">${previewText(m.band.low)}</div>
+    <ul class="outcomes" id="outcomes">${outcomesHTML(m.band.low, m.band.high)}</ul>
+  </div></div>
+
+  <div class="grouplab">Data</div>
+  <div class="group">
+    ${["me","partner"].map(v => `<div class="item">
+      <span class="t">${esc(S.names[v])}’s card<small>${S.source[v] === "sample" ? "Sample data" : esc(S.source[v])}</small></span>
+      <span><input class="filein" type="file" id="f-${v}" accept=".csv,.xlsx,.xls" data-act="upload" data-v="${v}"><label class="pick" for="f-${v}">Upload</label></span>
+    </div>`).join("")}
+    <div class="item">
+      <span class="t">Model<small>${m.version === "placeholder" ? "Placeholder weights" : esc(m.version || "Uploaded model")}</small></span>
+      <span><input class="filein" type="file" id="f-model" accept=".json" data-act="model"><label class="pick" for="f-model">Upload</label></span>
+    </div>
+  </div>
+  <p class="foot">CSV or Excel with Date, Merchant, Amount, Category, and Detailed category columns. A “Solo / Group” column counts as past decisions. Files stay on this device.</p>
+
+  <div class="group">
+    <div class="item"><button class="textbtn" data-act="resetLearning">Undo learning from swipes</button></div>
+    <div class="item"><button class="textbtn" data-act="sample">Restart with sample data</button></div>
+    <div class="item"><button class="textbtn danger" data-act="clearAll">Clear everything</button></div>
+  </div>`;
+}
+
+function render(){
+  CAND_IDS = null;
+  syncGroups();
+  const ms = ensureMonth();
+  let body;
+  if (!S.month && S.tab !== "settings") body = `<div class="empty"><div class="ic">${svg(ICON.activity, 'width="28" height="28"')}</div><h3>No transactions yet</h3><p>Upload a card export or load the sample data.</p><p style="margin-top:16px"><button class="pillbtn" data-act="tab" data-t="settings">Open settings</button></p></div>`;
+  else if (S.tab === "home") body = renderHome();
+  else if (S.tab === "review") body = renderReview();
+  else if (S.tab === "activity") body = renderActivity();
+  else body = renderSettings();
+  app.innerHTML = topBar(ms) + body;
+  renderTabs();
+  if (S.tab === "review") wireSwipe();
+}
+
+/* ---------- interactions ---------- */
+let toastTimer;
+function toast(msg){
+  clearTimeout(toastTimer);
+  let el = document.querySelector(".toast");
+  if (!el){ el = document.createElement("div"); el.className = "toast"; el.setAttribute("role","status"); document.body.appendChild(el); }
+  el.textContent = msg;
+  toastTimer = setTimeout(() => el.remove(), 3600);
+}
+function decide(y){
+  const q = reviewQueue(S.viewer);
+  if (!q.length) return;
+  applyLabel(q[clampIdx(q.length)].t, y);
+  if (reviewIdx >= q.length - 1) reviewIdx = 0;
+  render();
+}
+function applyLabel(t, y){
+  if (S.userLabels[t.id] === !!y) return;
+  const wasShared = status(t).kind === "shared";
+  learn(t, y);
+  S.userLabels[t.id] = !!y;
+  save();
+  const o = other(t.owner), share = money2(shareOf(t, o)), mon = monthName(t.date.slice(0,7), true);
+  if (y && !wasShared) toast(`Shared with ${nameOf(o)}. Their ${share} share is now in their ${mon} spending.`);
+  else if (!y && wasShared) toast(`Marked just yours. ${share} came off ${nameOf(o)}’s ${mon} spending.`);
+  else toast(`Marked ${y ? "shared" : "just yours"}.`);
+}
+function wireSwipe(){
+  const card = document.getElementById("topcard");
+  if (!card) return;
+  let startX = 0, dx = 0, dragging = false;
+  const stS = card.querySelector(".stamp.sh"), stO = card.querySelector(".stamp.so");
+  const setPos = (x, anim) => {
+    card.style.transition = anim ? "transform .25s ease" : "none";
+    card.style.transform = `translateX(${x}px) rotate(${x/20}deg)`;
+    stS.style.opacity = Math.max(0, Math.min(1, x/80));
+    stO.style.opacity = Math.max(0, Math.min(1, -x/80));
+  };
+  const fling = y => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches){ decide(y); return; }
+    setPos(y ? 520 : -520, true);
+    setTimeout(() => decide(y), 220);
+  };
+  card.addEventListener("pointerdown", e => { if (e.target.closest(".catchip")) return; dragging = true; startX = e.clientX; dx = 0; card.setPointerCapture(e.pointerId); });
+  card.addEventListener("pointermove", e => { if (dragging){ dx = e.clientX - startX; setPos(dx, false); } });
+  const end = () => { if (!dragging) return; dragging = false; if (dx > 90) fling(1); else if (dx < -90) fling(0); else setPos(0, true); };
+  card.addEventListener("pointerup", end);
+  card.addEventListener("pointercancel", end);
+  card.addEventListener("keydown", e => {
+    if (e.key === "ArrowRight"){ e.preventDefault(); fling(1); }
+    if (e.key === "ArrowLeft"){ e.preventDefault(); fling(0); }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp"){ const n = reviewQueue(S.viewer).length; if (n > 1){ e.preventDefault(); reviewIdx = clampIdx(n) + (e.key === "ArrowDown" ? 1 : -1); clampIdx(n); render(); const c = document.getElementById("topcard"); if (c) c.focus({preventScroll:true}); } }
+  });
+}
+function openSheet(id){
+  const t = S.tx[S.viewer].find(x => x.id === id);
+  if (!t) return;
+  const st = status(t), p = Math.round(st.p * 100);
+  overlay.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(t.merchant)}">
+    <div class="grab"></div>
+    <div class="hd">${logo(t.merchant, "mlogo")}<div><div class="nm">${esc(t.merchant)}</div><div class="sm">${dayName(t.date)}</div></div></div>
+    <button class="catchip" data-act="recat" data-id="${esc(t.id)}" aria-label="Category: ${groupLabel(groupOf(t))}. Change category">${catIcon(groupOf(t))}<span>${groupLabel(groupOf(t))}</span>${svg(ICON.chevR, 'width="14" height="14" style="transform:rotate(90deg)"')}</button>
+    <div class="amt num">${money2(t.amount)}</div>
+    <div class="card" style="position:static;padding:0;background:none"><div class="gauge" style="margin:0">
+      <div class="lab"><span>Chance it’s shared${st.source === "you" ? " (you already decided)" : ""}</span><b>${p}%</b></div>
+      <div class="track"><span style="width:${p}%"></span></div>
+      <div class="reasons">${reasons(t).map(r => `<span>${esc(r)}</span>`).join("")}</div>
+    </div></div>
+    ${st.kind === "shared" ? txSplitHTML(t) : ""}
+    <div class="acts">
+      <button class="b-solo" data-act="mark" data-id="${esc(t.id)}" data-y="0" ${S.userLabels[t.id] === false ? 'aria-pressed="true" disabled' : ""}>${S.userLabels[t.id] === false ? "✓ Just me" : "Just me"}</button>
+      <button class="b-shared" data-act="mark" data-id="${esc(t.id)}" data-y="1" ${S.userLabels[t.id] === true ? 'aria-pressed="true" disabled' : ""}>${S.userLabels[t.id] === true ? "✓ Shared" : "Shared"}</button>
+    </div>
+    ${st.source === "you" ? `<div style="text-align:center;margin-top:14px"><button class="textbtn" style="width:auto" data-act="unmark" data-id="${esc(t.id)}">Let the model decide</button></div>` : ""}
+  </div></div>`;
+  const first = overlay.querySelector(".sheet button");
+  if (first) first.focus();
+}
+const closeSheet = () => { overlay.innerHTML = ""; };
+function splitSpans(t, pctO){
+  const oc = t.owner === "me" ? "var(--you)" : "var(--partner)", xc = t.owner === "me" ? "var(--partner)" : "var(--you)";
+  const a = esc(nameOf(t.owner)), b = esc(nameOf(other(t.owner)));
+  return `<span style="width:${pctO}%;background:${oc}">${pctO >= 18 ? `${a} ${pctO}%` : ""}</span><span style="width:${100-pctO}%;background:${xc}">${100-pctO >= 18 ? `${b} ${100-pctO}%` : ""}</span>`;
+}
+function txSplitHTML(t){
+  const custom = typeof (S.splitOverrides||{})[t.id] === "number";
+  const pctO = ownerPct(t);
+  return `<div class="txsplit stack">
+    <div class="lab2"><span>Split for this purchase</span>${custom ? `<button class="textbtn" style="width:auto;font-size:13px" data-act="txsplitreset" data-id="${esc(t.id)}">Use default (${pctOf(t.owner)}/${100-pctOf(t.owner)})</button>` : `<span class="muted">Default</span>`}</div>
+    <div class="splitwrap"><div class="splitview" id="txsplitview">${splitSpans(t, pctO)}</div>
+    <input class="splitrange" type="range" min="0" max="100" step="5" value="${pctO}" data-act="txsplit" data-id="${esc(t.id)}" aria-label="Share of this purchase paid by ${esc(nameOf(t.owner))}"></div>
+    <div class="ends" style="margin-top:6px"><span>${esc(nameOf(other(t.owner)))}’s share: ${money2(t.amount * (100 - pctO) / 100)}</span></div>
+  </div>`;
+}
+const BAND_PRESETS = [
+  [0.4, "Likely shared", "You’ll review purchases that are probably shared but not certain."],
+  [0.2, "Maybe shared", "You’ll review anything that might reasonably be shared."],
+  [0.08, "Any chance", "You’ll review anything with even a small chance of being shared."]
+];
+const nearestPreset = low => BAND_PRESETS.reduce((best, [v]) => Math.abs(v - low) < Math.abs(best - low) ? v : best, BAND_PRESETS[0][0]);
+function outcomesHTML(low, high){
+  const L = Math.round(low*100), H = Math.round(high*100);
+  return `<li><i style="background:var(--you)"></i><span>Under ${L}%</span><b>Counted as just yours</b></li>
+    <li><i style="background:var(--warn)"></i><span>${L}% to ${H}%</span><b>You decide</b></li>
+    <li><i style="background:var(--shared)"></i><span>${H}% or more</span><b>Marked shared automatically</b></li>`;
+}
+function previewText(low){
+  const high = S.model.band.high;
+  const seen = new Set(), ex = [];
+  spend(S.tx[S.viewer]).slice().sort((a,b) => a.date < b.date ? 1 : -1).forEach(t => {
+    const p = score(t).p;
+    if (ex.length < 2 && p >= low && p < high && !seen.has(t.merchant)){ seen.add(t.merchant); ex.push(`${t.merchant} ${money2(t.amount)}`); }
+  });
+  const n = fmtQ(questionsPerMonth(low));
+  return ex.length ? `About ${n} a month, like ${ex.join(" or ")}.` : `About ${n} a month.`;
+}
+function questionsPerMonth(low){
+  const list = spend(S.tx[S.viewer]);
+  const months = new Set(list.map(t => t.date.slice(0,7))).size || 1;
+  const high = S.model.band.high;
+  return list.filter(t => { const p = score(t).p; return p >= low && p < high; }).length / months;
+}
+const fmtQ = q => q < 10 ? String(Math.round(q * 10) / 10) : String(Math.round(q));
+function zonesHTML(low, high){
+  return `<span style="width:${low*100}%;background:var(--you)">${low >= 0.14 ? "Just you" : ""}</span><span style="width:${(high-low)*100}%;background:var(--warn)">Ask me</span><span style="width:${(1-high)*100}%;background:var(--shared)">Auto shared</span>`;
+}
+function ticksHTML(low, high){
+  return `<span style="left:${low*100}%">${Math.round(low*100)}%</span><span style="left:${high*100}%">${Math.round(high*100)}%</span>`;
+}
+function itemSettlement(tid){ return (S.settlements || []).find(s => s.how === "item" && s.txIds && s.txIds[0] === tid); }
+/* A payment between the two people settles everything up to that day. The gap between what was owed and what was paid is shown, and can be carried forward. */
+function lastSettleDate(){ return (S.settlements || []).filter(s => s.how !== "item").reduce((m, s) => s.date > m ? s.date : m, ""); }
+function contribWindow(v, from, to){
+  const o = other(v), inW = d => d > from && d <= to; let b = 0;
+  spend(S.tx[v]).forEach(t => { if (inW(t.date) && status(t).kind === "shared") b += shareOf(t, o); });
+  spend(S.tx[o]).forEach(t => { if (inW(t.date) && status(t).kind === "shared") b -= shareOf(t, v); });
+  (S.settlements || []).forEach(s => { if (s.how === "item" && inW(s.date)) b += s.from === v ? s.amount : -s.amount; });
+  return b;
+}
+function settleHistory(v){
+  const groups = [];
+  (S.settlements || []).filter(s => s.how !== "item").sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0).forEach(p => {
+    const g = groups[groups.length - 1];
+    if (g && g.date === p.date) g.pays.push(p); else groups.push({ date: p.date, pays: [p] });
+  });
+  let prev = "";
+  return groups.map(g => {
+    const owed = contribWindow(v, prev, g.date);
+    const paid = g.pays.reduce((a, p) => a + (p.from === v ? p.amount : -p.amount), 0);
+    const h = { date: g.date, from: prev, pays: g.pays, owed, paid, delta: owed + paid, carried: !!(S.carry || {})[g.date] };
+    prev = g.date;
+    return h;
+  });
+}
+function openHistorySheet(){
+  const v = S.viewer, o = other(v), oName = esc(nameOf(o)), hist = settleHistory(v).reverse();
+  const dayAfter = d => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() + 1); return x.toISOString().slice(0,10); };
+  overlay.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="Past settle-ups">
+    <div class="grab"></div>
+    <div class="hd"><span class="cic" style="background:var(--shared-soft);color:var(--shared)">${svg(ICON.swap)}</span><div><div class="nm">Past settle-ups</div><div class="sm">Each payment settles everything before it. Differences are shown so you can decide what to do with them.</div></div></div>
+    <ul class="paylist">${hist.map(h => {
+      const range = h.from ? `${dayName(dayAfter(h.from))} to ${dayName(h.date)}` : `everything up to ${dayName(h.date)}`;
+      const owedTxt = Math.abs(h.owed) < 0.5 ? "nothing was owed" : h.owed < 0 ? `you owed ${oName} ${money2(-h.owed)}` : `${oName} owed you ${money2(h.owed)}`;
+      const paidTxt = h.paid > 0 ? `You paid ${oName} ${money2(h.paid)}` : `${oName} paid you ${money2(-h.paid)}`;
+      const gap = Math.abs(h.delta) < 1 ? `<span style="color:var(--shared);font-weight:600">✓ Matched</span>` : (h.delta < 0 ? `You still owed ${oName} ${money2(-h.delta)} after this` : `${oName} still owed you ${money2(h.delta)} after this`);
+      return `<li style="align-items:flex-start"><span class="mid"><div class="nm">${dayName(h.date)}: ${paidTxt}</div>
+        <div class="sm">For ${range}, ${owedTxt}.</div><div class="sm" style="margin-top:2px">${gap}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${Math.abs(h.delta) >= 1 ? `<button class="setbtn" data-act="carry" data-d="${h.date}" aria-pressed="${h.carried}">${h.carried ? "✓ Carried forward" : `Carry ${money2(Math.abs(h.delta))} forward`}</button>` : ""}${h.pays.map(p => `<button class="setbtn" data-act="delsettle" data-id="${esc(p.id)}" data-reopen="1">Remove payment</button>`).join("")}</div>
+      </span></li>`; }).join("")}</ul>
+    <p class="foot" style="margin:10px 0 0">If you don’t carry a difference forward, that period counts as settled even though the amounts didn’t match exactly.</p>
+  </div></div>`;
+}
+function paidItems(payer){ const last = lastSettleDate(); return spend(S.tx[payer]).filter(t => status(t).kind === "shared" && t.date > last).sort((a,b) => { const sa = itemSettlement(a.id) ? 1 : 0, sb = itemSettlement(b.id) ? 1 : 0; return sa !== sb ? sa - sb : (a.date < b.date ? 1 : -1); }); }
+let paidShowSettled = false;
+function openPaidSheet(payer){
+  const v = S.viewer, debtor = other(payer), allItems = paidItems(payer);
+  const who = payer === v ? "You" : esc(nameOf(payer));
+  const debtorTxt = debtor === v ? "You owe" : `${esc(nameOf(debtor))} owes`;
+  const open = allItems.filter(t => !itemSettlement(t.id));
+  const nSettled = allItems.length - open.length;
+  const items = paidShowSettled ? allItems : open;
+  overlay.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="${who} paid for shared things">
+    <div class="grab"></div>
+    <div class="hd"><span class="mini" style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:700;color:#fff;background:${payer === "me" ? "var(--you)" : "var(--partner)"}">${esc(initial(nameOf(payer)))}</span><div><div class="nm">${who} paid for shared things</div><div class="sm">${lastSettleDate() ? `Since you last settled up on ${dayName(lastSettleDate())}` : "All months"}, open ones first. Mark a purchase settled once ${debtor === v ? "you’ve" : esc(nameOf(debtor)) + " has"} paid back the share.</div></div></div>
+    ${items.length ? `<ul class="paylist">${items.map(t => { const s = itemSettlement(t.id), owed = shareOf(t, debtor); return `<li>
+      ${logo(t.merchant, "mlogo")}
+      <span class="mid"><div class="nm">${esc(t.merchant)}</div><div class="sm">${dayName(t.date)}${t.date.slice(0,4) !== String(new Date().getFullYear()) ? " " + t.date.slice(0,4) : ""}, ${money2(t.amount)}. ${s ? "Paid back" : `${debtorTxt} ${money2(owed)}`}</div></span>
+      <button class="setbtn" data-act="settleitem" data-id="${esc(t.id)}" data-payer="${payer}" aria-pressed="${!!s}">${s ? "✓ Settled" : "Settle"}</button>
+    </li>`; }).join("")}</ul>` : `<p class="muted" style="margin:16px 0 0">Nothing open. Every shared purchase here is settled.</p>`}
+    ${open.length > 1 ? `<div class="acts" style="grid-template-columns:1fr"><button class="b-solo" data-act="settleall" data-payer="${payer}">Mark all ${open.length} as settled</button></div>` : ""}
+    ${nSettled ? `<div style="text-align:center;margin-top:12px"><button class="textbtn" style="width:auto;font-size:13px" data-act="togglesettled" data-payer="${payer}">${paidShowSettled ? "Hide settled purchases" : `Show ${nSettled} settled purchase${nSettled === 1 ? "" : "s"}`}</button></div>` : ""}
+  </div></div>`;
+}
+function openCatPicker(id, mode){
+  const t = S.tx[S.viewer].find(x => x.id === id);
+  if (!t) return;
+  const cur = groupOf(t);
+  const isXfer = isXferLike(t), xferKey = isXfer ? payeeKey(t) : null;
+  const allRow = (isXfer && !xferKey) ? `<p class="foot" style="margin:8px 0 0">This bank description doesn’t say who was paid, so the category applies to this payment only.</p>` : `<label class="allrow"><input type="checkbox" id="catall" checked>Use this category for every ${esc(t.merchant)} ${isXfer ? "payment" : "purchase"}</label>`;
+  const xferRows = isXfer && t.owner === S.viewer ? `<div class="xferopts"><div class="foot" style="margin:14px 0 6px">Not a purchase?</div>
+    <button class="setbtn" data-act="tpartner" data-id="${esc(t.id)}">${t.amount < 0 ? `It was a payment from ${esc(nameOf(other(t.owner)))}` : `It was a payment to ${esc(nameOf(other(t.owner)))}`}</button>
+    <button class="setbtn" data-act="tignore" data-id="${esc(t.id)}">${t.amount < 0 ? "Not a reimbursement (income or between my accounts)" : "Not spending (between my accounts)"}</button></div>` : "";
+  if (mode === "other"){
+    overlay.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="Name this category">
+      <div class="grab"></div>
+      <div class="hd">${catIcon("other")}<div><div class="nm">Name this category</div><div class="sm">${esc(t.merchant)}, ${money2(t.amount)}</div></div></div>
+      <p class="muted" style="font-size:14px;margin:14px 0 4px">“Other” groups everything together. A name like Pets or Gifts makes it easier to track.</p>
+      <div class="newcat"><input type="text" id="newcatname" placeholder="Category name" maxlength="24" aria-label="New category name"><button class="pillbtn" data-act="addcat" data-id="${esc(t.id)}">Add</button></div>
+      ${allRow}
+      <div style="display:flex;justify-content:space-between;margin-top:14px"><button class="textbtn" style="width:auto" data-act="recat" data-id="${esc(t.id)}">Back</button><button class="textbtn" style="width:auto" data-act="setcat" data-id="${esc(t.id)}" data-g="other" data-force="1">Keep as Other</button></div>
+    </div></div>`;
+    const inp = document.getElementById("newcatname");
+    if (inp) inp.focus();
+    return;
+  }
+  overlay.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="Change category">
+    <div class="grab"></div>
+    <div class="hd">${logo(t.merchant, "mlogo")}<div><div class="nm">Change category</div><div class="sm">${esc(t.merchant)}, ${money2(t.amount)}</div></div></div>
+    <ul class="catlist">${GROUPS.filter(g => g.id !== "other").map(g => `<li><button data-act="setcat" data-id="${esc(t.id)}" data-g="${g.id}" aria-pressed="${g.id === cur}">${catIcon(g.id)}<span>${g.label}</span>${g.id === cur ? `<span class="ck">${svg(ICON.check, 'width="20" height="20"')}</span>` : ""}</button></li>`).join("")}</ul>
+    ${xferRows}
+    <div class="newcat"><input type="text" id="newcatname" placeholder="Add a category, like Pets" maxlength="24" aria-label="New category name"><button class="pillbtn" data-act="addcat" data-id="${esc(t.id)}">Add</button></div>
+    ${allRow}
+  </div></div>`;
+  const first = overlay.querySelector(".catlist button");
+  if (first) first.focus();
+}
+
+/* ---------- file import ---------- */
+function findCol(headers, tests){
+  for (const test of tests){
+    const h = headers.find(h => test(h.toLowerCase().trim()));
+    if (h !== undefined) return h;
+  }
+  return null;
+}
+function toISO(v){
+  if (v instanceof Date && !isNaN(v)) return v.getFullYear() + "-" + String(v.getMonth()+1).padStart(2,"0") + "-" + String(v.getDate()).padStart(2,"0");
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return m[1] + "-" + m[2].padStart(2,"0") + "-" + m[3].padStart(2,"0");
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (m){ const y = m[3].length === 2 ? "20" + m[3] : m[3]; return y + "-" + m[1].padStart(2,"0") + "-" + m[2].padStart(2,"0"); }
+  return null;
+}
+function importRows(owner, rows, fileName){
+  if (!rows.length) throw new Error("The file has no rows.");
+  const headers = Object.keys(rows[0]);
+  const cDate = findCol(headers, [h => h === "date", h => h.includes("date")]);
+  const cMerch = findCol(headers, [h => h.includes("merchant"), h => h === "name", h => h.includes("description")]);
+  const cAmt = findCol(headers, [h => h.startsWith("amount"), h => h.includes("amount")]);
+  const cDet = findCol(headers, [h => h.includes("detailed")]);
+  const cCat = findCol(headers, [h => h === "category", h => h.includes("category") && !h.includes("detailed")]);
+  const cId = findCol(headers, [h => h.includes("transaction id"), h => h === "id"]);
+  const cChan = findCol(headers, [h => h.includes("channel")]);
+  const cLabel = findCol(headers, [h => h.includes("solo"), h => h.includes("shared"), h => h === "label"]);
+  const missing = [["Date",cDate],["Merchant",cMerch],["Amount",cAmt]].filter(x => !x[1]).map(x => x[0]);
+  if (missing.length) throw new Error("Couldn’t find these columns: " + missing.join(", ") + ".");
+  const out = []; const labels = {};
+  rows.forEach((r, i) => {
+    const date = toISO(r[cDate]);
+    const amount = typeof r[cAmt] === "number" ? r[cAmt] : parseFloat(String(r[cAmt]).replace(/[$,\s]/g, ""));
+    if (!date || isNaN(amount) || !String(r[cMerch]).trim()) return;
+    const id = owner + "-u-" + (cId && r[cId] ? String(r[cId]) : fileName.replace(/[^A-Za-z0-9]/g, "") + "-" + i);
+    const det = cDet ? String(r[cDet]).trim() : "";
+    let cat = cCat ? String(r[cCat]).trim() : "";
+    if (!cat && det) cat = det.split("_").slice(0, 2).join("_");
+    out.push({ id, owner, date, amount, merchant: String(r[cMerch]).trim(), cat, det, src: fileName, channel: cChan ? String(r[cChan]).trim() : "" });
+    if (cLabel){
+      const l = String(r[cLabel]).trim().toLowerCase();
+      if (l === "group" || l === "shared") labels[id] = true;
+      else if (l === "solo") labels[id] = false;
+    }
+  });
+  if (!out.length) throw new Error("No rows had a readable date, merchant, and amount.");
+  const wasSample = !S.source[owner] || S.source[owner] === "sample" || S.source[owner] === "No file yet";
+  const kept = wasSample ? [] : S.tx[owner].filter(t => t.src !== fileName);
+  const keptIds = new Set(kept.map(t => t.id));
+  Object.keys(S.userLabels).forEach(k => { if (k.startsWith(owner + "-") && !keptIds.has(k)) delete S.userLabels[k]; });
+  Object.assign(S.userLabels, labels);
+  const byId = new Map(); kept.concat(out).forEach(t => byId.set(t.id, t));
+  S.tx[owner] = [...byId.values()];
+  const files = wasSample ? [] : String(S.source[owner]).split(", ").filter(f => f && f !== fileName);
+  S.source[owner] = files.concat(fileName).join(", ");
+  S.month = null;
+  save();
+  const nl = Object.keys(labels).length;
+  toast(`Loaded ${out.length} transactions for ${S.names[owner]}${nl ? `, including ${nl} past decisions` : ""}.`);
+}
+function readFile(owner, file){
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      if (typeof XLSX === "undefined") throw new Error("The file reader didn’t load. Check your connection and reload the page.");
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:"array", cellDates:true});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {raw:true, defval:""});
+      importRows(owner, rows, file.name);
+      render();
+    } catch(err){ toast(err.message || "Couldn’t read that file."); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+function readModel(file){
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const m = JSON.parse(e.target.result);
+      if (typeof m.intercept !== "number" || typeof m.coef !== "object") throw new Error("The model file needs “intercept” and “coef” fields.");
+      m.scaler = m.scaler || PLACEHOLDER_MODEL.scaler;
+      m.band = m.band || deepCopy(S.model.band);
+      m.learning = m.learning || deepCopy(PLACEHOLDER_MODEL.learning);
+      m.version = m.version || file.name;
+      S.baseModel = deepCopy(m); S.model = deepCopy(m);
+      save(); render(); toast("Model weights loaded.");
+    } catch(err){ toast(err.message || "Couldn’t read that model file."); }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- event delegation ---------- */
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-act]");
+  if (!el) return;
+  const act = el.dataset.act;
+  if (act === "close"){ if (e.target === el) closeSheet(); return; }
+  if (act === "tab"){ S.tab = el.dataset.t; save(); render(); window.scrollTo(0,0); }
+  else if (act === "viewer"){ S.viewer = el.dataset.v; save(); render(); }
+  else if (act === "month"){ const ms = allMonths(); const i = ms.indexOf(S.month) + Number(el.dataset.d); if (ms[i]){ S.month = ms[i]; save(); render(); } }
+  else if (act === "opencat"){ S.txGroup = el.dataset.g; S.tab = "activity"; save(); render(); window.scrollTo(0,0); }
+  else if (act === "hgroup"){ S.historyGroup = el.dataset.g; save(); render(); }
+  else if (act === "txgroup"){ S.txGroup = el.dataset.g; save(); render(); }
+  else if (act === "revnav"){ const n = reviewQueue(S.viewer).length; if (n > 1){ reviewIdx = clampIdx(n) + Number(el.dataset.d); clampIdx(n); render(); const c = document.getElementById("topcard"); if (c) c.focus({preventScroll:true}); } }
+  else if (act === "decide"){
+    const card = document.getElementById("topcard");
+    const y = Number(el.dataset.y);
+    if (card && !window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+      card.style.transition = "transform .25s ease"; card.style.transform = `translateX(${y ? 520 : -520}px) rotate(${y ? 20 : -20}deg)`;
+      setTimeout(() => decide(y), 220);
+    } else decide(y);
+  }
+  else if (act === "open") openSheet(el.dataset.id);
+  else if (act === "mark"){
+    const t = S.tx[S.viewer].find(x => x.id === el.dataset.id);
+    if (t){ applyLabel(t, Number(el.dataset.y)); closeSheet(); render(); }
+  }
+  else if (act === "tpurchase"){
+    const t = S.tx[S.viewer].find(x => x.id === el.dataset.id); if (!t) return;
+    const k = payeeKey(t);
+    overlay.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="What did you buy?">
+      <div class="grab"></div>
+      <div class="hd">${logo(t.merchant, "mlogo")}<div><div class="nm">What was it for?</div><div class="sm">${esc(t.merchant)}, ${money2(t.amount)}, ${dayName(t.date)}</div></div></div>
+      <ul class="catlist">${GROUPS.filter(g => g.id !== "other").map(g => `<li><button data-act="tcat" data-id="${esc(t.id)}" data-g="${g.id}">${catIcon(g.id)}<span>${esc(g.label)}</span></button></li>`).join("")}</ul>
+      ${k ? `<label class="allrow"><input type="checkbox" id="tremember" checked>Treat every payment to ${esc(t.merchant)} this way</label>` : `<p class="foot" style="margin:8px 0 0">This bank description doesn’t name who was paid, so the choice applies to this payment only.</p>`}
+    </div></div>`;
+    const f = overlay.querySelector(".catlist button"); if (f) f.focus();
+  }
+  else if (act === "tcat"){
+    const t = S.tx[S.viewer].find(x => x.id === el.dataset.id); if (!t) return;
+    S.transferChoice = S.transferChoice || {}; S.catOverrides = S.catOverrides || {}; S.recipientChoice = S.recipientChoice || {};
+    S.transferChoice[t.id] = "purchase"; S.catOverrides[t.id] = el.dataset.g;
+    const rem = document.getElementById("tremember"), k = payeeKey(t);
+    if (rem && rem.checked && k) S.recipientChoice[k] = { kind: "purchase", cat: el.dataset.g };
+    save(); closeSheet(); render();
+    toast(`Counted as ${groupLabel(el.dataset.g)}. It now appears with your other purchases, where you can mark it shared.`);
+  }
+  else if (act === "tpartner"){
+    const t = S.tx[S.viewer].find(x => x.id === el.dataset.id); if (!t) return;
+    S.settlements = S.settlements || [];
+    S.settlements.push({ id: "s" + Date.now().toString(36), from: t.amount < 0 ? other(t.owner) : t.owner, to: t.amount < 0 ? t.owner : other(t.owner), amount: Math.abs(t.amount), date: t.date, txIds: [t.id], via: t.merchant, how: "transfer" });
+    save(); closeSheet(); render(); toast(`Counted ${money2(t.amount)} to ${nameOf(other(t.owner))} toward settling up.`);
+  }
+  else if (act === "tignore"){
+    const t = S.tx[S.viewer].find(x => x.id === el.dataset.id); if (!t) return;
+    S.transferChoice = S.transferChoice || {}; S.transferChoice[t.id] = "ignore";
+    save(); closeSheet(); render(); toast(`${money2(t.amount)} to ${t.merchant} no longer counts as spending.`);
+  }
+  else if (act === "sethistory"){ openHistorySheet(); }
+  else if (act === "carry"){ S.carry = S.carry || {}; if (S.carry[el.dataset.d]) delete S.carry[el.dataset.d]; else S.carry[el.dataset.d] = true; save(); render(); openHistorySheet(); }
+  else if (act === "paidlist"){ paidShowSettled = false; openPaidSheet(el.dataset.payer); }
+  else if (act === "togglesettled"){ paidShowSettled = !paidShowSettled; openPaidSheet(el.dataset.payer); }
+  else if (act === "settleitem" || act === "settleall"){
+    const payer = el.dataset.payer, debtor = other(payer);
+    S.settlements = S.settlements || [];
+    const add = t => S.settlements.push({ id: "s" + Date.now().toString(36) + Math.random().toString(36).slice(2,6), from: debtor, to: payer, amount: Math.round(shareOf(t, debtor) * 100) / 100, date: t.date, txIds: [t.id], via: `Paid back for ${t.merchant}`, how: "item" });
+    if (act === "settleitem"){
+      const t = S.tx[payer].find(x => x.id === el.dataset.id);
+      const s = t && itemSettlement(t.id);
+      if (s) S.settlements = S.settlements.filter(x => x !== s); else if (t) add(t);
+    } else paidItems(payer).filter(t => !itemSettlement(t.id)).forEach(add);
+    save(); render(); openPaidSheet(payer);
+  }
+  else if (act === "settleyes"){
+    const c = candidatesFor(S.viewer)[Number(el.dataset.k) || 0];
+    if (c){ S.settlements = S.settlements || []; S.settlements.push({ id: "s" + Date.now().toString(36), ...c, how: "matched" }); save(); render(); toast(`Counted ${money2(c.amount)} from ${nameOf(c.from)} to ${nameOf(c.to)} toward settling up.`); }
+  }
+  else if (act === "settleno"){
+    const c = candidatesFor(S.viewer)[Number(el.dataset.k) || 0];
+    if (c){ S.dismissed = S.dismissed || {}; c.txIds.forEach(id => S.dismissed[id] = true); save(); render(); }
+  }
+  else if (act === "delsettle"){
+    S.settlements = (S.settlements || []).filter(s => s.id !== el.dataset.id); save(); render(); if (el.dataset.reopen){ if (settleHistory(S.viewer).length) openHistorySheet(); else closeSheet(); } toast("Payment removed.");
+  }
+  else if (act === "recordpay"){
+    const v = S.viewer, o = other(v), today = new Date().toISOString().slice(0,10);
+    overlay.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="Record a payment">
+      <div class="grab"></div>
+      <div class="hd"><span class="cic" style="background:var(--shared-soft);color:var(--shared)">${svg(ICON.swap)}</span><div><div class="nm">Record a payment</div><div class="sm">Cash, Zelle, or anything the app didn’t catch</div></div></div>
+      <div class="seg3" style="grid-template-columns:1fr 1fr;margin-top:16px" role="radiogroup" aria-label="Who paid">
+        <button role="radio" data-act="paydir" data-from="${v}" aria-checked="true">You paid ${esc(nameOf(o))}</button>
+        <button role="radio" data-act="paydir" data-from="${o}" aria-checked="false">${esc(nameOf(o))} paid you</button>
+      </div>
+      <div class="payrow"><label>Amount<input id="payamt" type="text" inputmode="decimal" placeholder="0.00"></label><label>Date<input id="paydate" type="date" value="${today}"></label></div>
+      <div class="acts" style="grid-template-columns:1fr"><button class="b-shared" data-act="savepay">Save payment</button></div>
+    </div></div>`;
+    const a = document.getElementById("payamt"); if (a) a.focus();
+  }
+  else if (act === "paydir"){
+    el.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-checked", b === el ? "true" : "false"));
+  }
+  else if (act === "savepay"){
+    const amt = parseFloat(String((document.getElementById("payamt") || {}).value || "").replace(/[$,\s]/g, ""));
+    const date = (document.getElementById("paydate") || {}).value;
+    const sel = overlay.querySelector('[data-act="paydir"][aria-checked="true"]');
+    if (!(amt > 0)){ toast("Enter an amount above zero."); return; }
+    if (!date){ toast("Pick a date."); return; }
+    const from = sel ? sel.dataset.from : S.viewer;
+    S.settlements = S.settlements || [];
+    S.settlements.push({ id: "s" + Date.now().toString(36), from, to: other(from), amount: Math.round(amt * 100) / 100, date, txIds: [], via: "Recorded payment", how: "manual" });
+    save(); closeSheet(); render(); toast(`Recorded ${money2(amt)} from ${nameOf(from)} to ${nameOf(other(from))}.`);
+  }
+  else if (act === "decidecustom"){
+    const q = reviewQueue(S.viewer);
+    if (q.length){ const t = q[clampIdx(q.length)].t; applyLabel(t, 1); if (reviewIdx >= q.length - 1) reviewIdx = 0; render(); openSheet(t.id); }
+  }
+  else if (act === "txsplitreset"){
+    if (S.splitOverrides) delete S.splitOverrides[el.dataset.id];
+    save(); render(); openSheet(el.dataset.id);
+  }
+  else if (act === "unmark"){ delete S.userLabels[el.dataset.id]; save(); closeSheet(); render(); }
+  else if (act === "bandpreset"){ const v = Number(el.dataset.v); [S.model, S.baseModel].forEach(m => { m.band.low = v; }); save(); render(); }
+  else if (act === "recat"){ e.stopPropagation(); openCatPicker(el.dataset.id); }
+  else if (act === "addcat"){
+    const input = document.getElementById("newcatname");
+    const name = input ? input.value.trim() : "";
+    if (!name){ toast("Type a name for the new category first."); if (input) input.focus(); return; }
+    S.customGroups = S.customGroups || [];
+    let g = GROUPS.find(x => x.label.toLowerCase() === name.toLowerCase());
+    if (!g){ g = { id: "c_" + Date.now().toString(36), label: name }; S.customGroups.push(g); syncGroups(); }
+    const t = S.tx[S.viewer].find(x => x.id === el.dataset.id);
+    if (t){
+      const allBox = document.getElementById("catall");
+      S.catOverrides = S.catOverrides || {}; S.merchantCat = S.merchantCat || {};
+      if (allBox && allBox.checked){
+        S.merchantCat[t.merchant] = g.id;
+        S.tx[S.viewer].forEach(x => { if (x.merchant === t.merchant) delete S.catOverrides[x.id]; });
+      } else S.catOverrides[t.id] = g.id;
+    }
+    save(); closeSheet(); render();
+    toast(`Added ${g.label} and moved ${t ? t.merchant : "the purchase"} there.`);
+  }
+  else if (act === "setcat"){
+    if (el.dataset.g === "other" && !el.dataset.force){ openCatPicker(el.dataset.id, "other"); return; }
+    const t = S.tx[S.viewer].find(x => x.id === el.dataset.id);
+    if (t){
+      const allBox = document.getElementById("catall");
+      S.catOverrides = S.catOverrides || {}; S.merchantCat = S.merchantCat || {};
+      if (allBox && allBox.checked){
+        S.merchantCat[t.merchant] = el.dataset.g;
+        S.tx[S.viewer].forEach(x => { if (x.merchant === t.merchant) delete S.catOverrides[x.id]; });
+      } else S.catOverrides[t.id] = el.dataset.g;
+      save(); closeSheet(); render();
+      toast(`Moved ${allBox && allBox.checked ? "all " + t.merchant + " purchases" : t.merchant} to ${groupLabel(el.dataset.g)}.`);
+    }
+  }
+  else if (act === "resetLearning"){ S.model = deepCopy(S.baseModel); save(); render(); toast("Swipe learning undone. Your decisions are kept."); }
+  else if (act === "sample"){
+    if (!confirm("Restart with the sample data? This clears uploaded transactions, decisions, splits, categories, payments, and learned weights on this device.")) return;
+    S = defaultState(); reviewIdx = 0; paidShowSettled = false; save(); render(); window.scrollTo(0,0); toast("Restarted with the sample data.");
+  }
+  else if (act === "clearAll"){
+    if (!confirm("Clear all transactions, decisions, and learned weights on this device?")) return;
+    try { localStorage.removeItem(STORE_KEY); } catch(err){}
+    S = defaultState(); S.tx = {me:[], partner:[]}; S.source = {me:"No file yet", partner:"No file yet"}; S.tab = "settings"; save(); render();
+  }
+});
+document.addEventListener("input", e => {
+  const el = e.target;
+  if (el.dataset.act === "txsplit"){
+    const t = S.tx[S.viewer].find(x => x.id === el.dataset.id);
+    if (t){
+      S.splitOverrides = S.splitOverrides || {};
+      S.splitOverrides[t.id] = Number(el.value); save();
+      const sv = document.getElementById("txsplitview"); if (sv) sv.innerHTML = splitSpans(t, Number(el.value));
+      const end = el.closest(".txsplit").querySelector(".ends span"); if (end) end.textContent = `${nameOf(other(t.owner))}’s share: ${money2(t.amount * (100 - Number(el.value)) / 100)}`;
+    }
+  }
+  if (el.dataset.act === "split"){
+    S.splitMe = Number(el.value); save();
+    const sv = document.getElementById("splitview");
+    if (sv){ const [a,b] = sv.children; a.style.width = S.splitMe + "%"; b.style.width = (100 - S.splitMe) + "%";
+      a.textContent = S.splitMe >= 15 ? `${S.names.me} ${S.splitMe}%` : ""; b.textContent = 100 - S.splitMe >= 15 ? `${S.names.partner} ${100 - S.splitMe}%` : ""; }
+  }
+  if (el.dataset.act === "band"){
+    const x = Number(el.value);
+    [S.model, S.baseModel].forEach(m => { m.band.low = x; });
+    save();
+    const big = document.getElementById("thbig"); if (big) big.textContent = Math.round(x*100) + "%";
+    const q = document.getElementById("thq"); if (q) q.textContent = previewText(x);
+    const oc = document.getElementById("outcomes"); if (oc) oc.innerHTML = outcomesHTML(x, S.model.band.high);
+  }
+});
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (el.dataset.act === "name"){ S.names[el.dataset.v] = el.value.trim() || (el.dataset.v === "me" ? "Person 1" : "Person 2"); save(); render(); }
+  if (el.dataset.act === "upload" && el.files[0]) readFile(el.dataset.v, el.files[0]);
+  if (el.dataset.act === "model" && el.files[0]) readModel(el.files[0]);
+  if (el.dataset.act === "txsplit"){ render(); openSheet(el.dataset.id); }
+  if (el.dataset.act === "bandtoggle"){ const v = el.checked ? 0.08 : 0.2; [S.model, S.baseModel].forEach(m => { m.band.low = v; }); save(); render(); }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && overlay.innerHTML) closeSheet(); });
+
+/* The automatic-sharing cutoff isn't a user setting; restore it if an earlier version of the page changed it. */
+if (S.model.version === "placeholder"){ S.model.band.high = PLACEHOLDER_MODEL.band.high; S.baseModel.band.high = PLACEHOLDER_MODEL.band.high; save(); }
+/* If someone already made a custom category with a built-in name, fold it into the built-in one. */
+(S.customGroups || []).slice().forEach(g => {
+  const b = BASE_GROUPS.find(x => x.label.toLowerCase() === String(g.label).toLowerCase());
+  if (!b) return;
+  ["catOverrides", "merchantCat"].forEach(k => { const m = S[k] || {}; Object.keys(m).forEach(key => { if (m[key] === g.id) m[key] = b.id; }); });
+  S.customGroups = S.customGroups.filter(x => x !== g);
+  save();
+});
+render();
+})();
+</script>
+</body>
+</html>
