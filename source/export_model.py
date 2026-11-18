@@ -30,7 +30,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 ROOT = Path(__file__).resolve().parent.parent
-CANDIDATES = [ROOT / "data" / "Gabriela Transactions.xlsx", ROOT / "data" / "raw" / "Gabriela Transactions.xlsx"]
+CANDIDATES = [ROOT / "data" / "Transactions.xlsx", ROOT / "data" / "raw" / "Transactions.xlsx"]
 PATH = next((p for p in CANDIDATES if p.exists()), None)
 if PATH is None:
     raise FileNotFoundError(f"Spreadsheet not found. Looked in: {[str(p) for p in CANDIDATES]}")

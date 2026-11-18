@@ -25,8 +25,8 @@ READING THE RESULTS
              share of shared purchases, so compare against that number.
     "change": embeddings minus no embeddings. Positive means embeddings helped.
 
-Run:  python source/shared_model.py   (reads "data/Gabriela Transactions.xlsx" or
-      "data/raw/Gabriela Transactions.xlsx", sheet "data_pd")
+Run:  python source/shared_model.py   (reads "data/Transactions.xlsx" or
+      "data/raw/Transactions.xlsx", sheet "data_pd")
 Needs: pip install -r requirements.txt
 """
 from pathlib import Path
@@ -47,7 +47,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 # Part 1: load, clean, split
 # =====================================================================
 ROOT = Path(__file__).resolve().parent.parent
-CANDIDATES = [ROOT / "data" / "Gabriela Transactions.xlsx", ROOT / "data" / "raw" / "Gabriela Transactions.xlsx"]
+CANDIDATES = [ROOT / "data" / "Transactions.xlsx", ROOT / "data" / "raw" / "Transactions.xlsx"]
 PATH = next((p for p in CANDIDATES if p.exists()), None)
 if PATH is None:
     raise FileNotFoundError(f"Spreadsheet not found. Looked in: {[str(p) for p in CANDIDATES]}")
