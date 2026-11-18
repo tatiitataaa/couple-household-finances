@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Built-in model, written by source/export_model.py. Sets window.SHARED_MODEL. -->
+<script src="model.js"></script>
 <style>
 :root{
   color-scheme: light;
@@ -371,7 +373,7 @@ const groupLabel = id => (GROUPS.find(g => g.id === id) || {label:id}).label;
 const BASE_GROUPS = GROUPS.slice();
 function syncGroups(){ GROUPS.length = 0; BASE_GROUPS.forEach(g => GROUPS.push(g)); (S.customGroups || []).forEach(g => GROUPS.push(g)); }
 
-/* ---------- placeholder model (replace with exported model.json) ---------- */
+/* ---------- placeholder model (used only if model.js is missing) ---------- */
 const PLACEHOLDER_MODEL = {
   version: "placeholder",
   intercept: -2.4,
@@ -461,6 +463,12 @@ function makeSample(owner, templates, seed){
 
 /* ---------- state ---------- */
 const deepCopy = o => JSON.parse(JSON.stringify(o));
+/* The trained model from model.js; the placeholder only if that file didn't load. */
+const BUILTIN_MODEL = (window.SHARED_MODEL && typeof window.SHARED_MODEL.intercept === "number" && window.SHARED_MODEL.coef) ? window.SHARED_MODEL : PLACEHOLDER_MODEL;
+/* Broad category from the detailed one, the same rule the model was trained with:
+   the first primary category the detailed category starts with, else OTHER. */
+const PRIMARY_CATS = BUILTIN_MODEL.primaryCategories || ["FOOD_AND_DRINK","GENERAL_MERCHANDISE","GENERAL_SERVICES","HOME_IMPROVEMENT","RENT_AND_UTILITIES","TRANSPORTATION","TRAVEL","ENTERTAINMENT","MEDICAL","PERSONAL_CARE","GOVERNMENT_AND_NON_PROFIT","LOAN_PAYMENTS","BANK_FEES","TRANSFER_IN","TRANSFER_OUT","INCOME"];
+const primaryOf = det => PRIMARY_CATS.find(p => det.startsWith(p)) || "OTHER";
 const defaultState = (seed) => ({
   names: { me: "Jordan", partner: "Alex" },
   splitMe: 70,
@@ -476,8 +484,8 @@ const defaultState = (seed) => ({
     partner: makeSample("partner", SAMPLE_PARTNER, seed ? seed + 14 : 21).concat([{ id: "partner-v1", owner: "partner", merchant: "Venmo", cat: "TRANSFER_IN", det: "TRANSFER_IN_ACCOUNT_TRANSFER", amount: -150, date: "2026-11-04" }])
   },
   userLabels: {},
-  baseModel: deepCopy(PLACEHOLDER_MODEL),
-  model: deepCopy(PLACEHOLDER_MODEL)
+  baseModel: deepCopy(BUILTIN_MODEL),
+  model: deepCopy(BUILTIN_MODEL)
 });
 let S = load() || defaultState();
 function load(){
@@ -499,9 +507,9 @@ function score(t, m){
   const c = m.coef;
   const wm = c["merchant=" + t.merchant];
   const we = c["emb=" + t.merchant];          // precomputed embedding effect, known merchants only
-  const wd = c["det=" + t.det] || 0;
+  const wd = c["det=" + (t.det || "UNKNOWN")] || 0;
   const wc = c["cat=" + t.cat] || 0;
-  const wch = c["channel=" + t.channel] || 0;
+  const wch = c["channel=" + (t.channel || "unknown")] || 0;
   const za = zAmount(m, t);
   const wa = (c["log_amount"] || 0) * za;
   const merch = (wm === undefined && we === undefined) ? undefined : (wm || 0) + (we || 0);
@@ -1002,8 +1010,7 @@ function renderSettings(){
       <span><input class="filein" type="file" id="f-${v}" accept=".csv,.xlsx,.xls" data-act="upload" data-v="${v}"><label class="pick" for="f-${v}">Upload</label></span>
     </div>`).join("")}
     <div class="item">
-      <span class="t">Model<small>${m.version === "placeholder" ? "Placeholder weights" : esc(m.version || "Uploaded model")}</small></span>
-      <span><input class="filein" type="file" id="f-model" accept=".json" data-act="model"><label class="pick" for="f-model">Upload</label></span>
+      <span class="t">Model<small>${m.version === "placeholder" ? "Placeholder weights (model.js not found)" : `Built in, ${esc(m.version)}${m.trainedOn ? `, trained on ${m.trainedOn.purchases.toLocaleString("en-US")} purchases` : ""}`}</small></span>
     </div>
   </div>
   <p class="foot">CSV or Excel with Date, Merchant, Amount, Category, and Detailed category columns. A “Solo / Group” column counts as past decisions. Files stay on this device.</p>
@@ -1295,7 +1302,7 @@ function importRows(owner, rows, fileName){
     const id = owner + "-u-" + (cId && r[cId] ? String(r[cId]) : fileName.replace(/[^A-Za-z0-9]/g, "") + "-" + i);
     const det = cDet ? String(r[cDet]).trim() : "";
     let cat = cCat ? String(r[cCat]).trim() : "";
-    if (!cat && det) cat = det.split("_").slice(0, 2).join("_");
+    if (!cat && det) cat = primaryOf(det);
     out.push({ id, owner, date, amount, merchant: String(r[cMerch]).trim(), cat, det, src: fileName, channel: cChan ? String(r[cChan]).trim() : "" });
     if (cLabel){
       const l = String(r[cLabel]).trim().toLowerCase();
@@ -1331,22 +1338,6 @@ function readFile(owner, file){
     } catch(err){ toast(err.message || "Couldn’t read that file."); }
   };
   reader.readAsArrayBuffer(file);
-}
-function readModel(file){
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const m = JSON.parse(e.target.result);
-      if (typeof m.intercept !== "number" || typeof m.coef !== "object") throw new Error("The model file needs “intercept” and “coef” fields.");
-      m.scaler = m.scaler || PLACEHOLDER_MODEL.scaler;
-      m.band = m.band || deepCopy(S.model.band);
-      m.learning = m.learning || deepCopy(PLACEHOLDER_MODEL.learning);
-      m.version = m.version || file.name;
-      S.baseModel = deepCopy(m); S.model = deepCopy(m);
-      save(); render(); toast("Model weights loaded.");
-    } catch(err){ toast(err.message || "Couldn’t read that model file."); }
-  };
-  reader.readAsText(file);
 }
 
 /* ---------- event delegation ---------- */
@@ -1545,12 +1536,19 @@ document.addEventListener("change", e => {
   const el = e.target;
   if (el.dataset.act === "name"){ S.names[el.dataset.v] = el.value.trim() || (el.dataset.v === "me" ? "Person 1" : "Person 2"); save(); render(); }
   if (el.dataset.act === "upload" && el.files[0]) readFile(el.dataset.v, el.files[0]);
-  if (el.dataset.act === "model" && el.files[0]) readModel(el.files[0]);
   if (el.dataset.act === "txsplit"){ render(); openSheet(el.dataset.id); }
   if (el.dataset.act === "bandtoggle"){ const v = el.checked ? 0.08 : 0.2; [S.model, S.baseModel].forEach(m => { m.band.low = v; }); save(); render(); }
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && overlay.innerHTML) closeSheet(); });
 
+/* A newer built-in model replaces the one saved in this browser. Your review threshold is kept;
+   weights learned from earlier swipes are reset, since they were tuned to the old model. */
+if (!S.baseModel || S.baseModel.version !== BUILTIN_MODEL.version){
+  const low = S.model && S.model.band ? S.model.band.low : undefined;
+  S.baseModel = deepCopy(BUILTIN_MODEL); S.model = deepCopy(BUILTIN_MODEL);
+  if (typeof low === "number"){ S.model.band.low = low; S.baseModel.band.low = low; }
+  save();
+}
 /* The automatic-sharing cutoff isn't a user setting; restore it if an earlier version of the page changed it. */
 if (S.model.version === "placeholder"){ S.model.band.high = PLACEHOLDER_MODEL.band.high; S.baseModel.band.high = PLACEHOLDER_MODEL.band.high; save(); }
 /* If someone already made a custom category with a built-in name, fold it into the built-in one. */

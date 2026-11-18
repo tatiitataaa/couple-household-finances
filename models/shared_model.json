@@ -1,6 +1,6 @@
 {
   "name": "shared-or-solo",
-  "version": "2026-11-17",
+  "version": "2026-11-18",
   "model": "logistic regression (L2), no embeddings",
   "trained_on": {
     "purchases": 1980,

@@ -14,12 +14,21 @@ source/
 models/shared_model.json     exported model
 notebooks/                   notebook version of the model
 frontend/index.html          "Shared: budgeting for two" app (open in a browser)
+frontend/model.js            built-in model for the app (written by export_model.py)
 requirements.txt
 ```
 
 ## Frontend
 
-Open `frontend/index.html` in a browser. It starts with built-in sample data; upload transactions and a model JSON in **Settings → Data**. Everything runs in the browser, and files stay on the device.
+Open `frontend/index.html` in a browser (double-clicking works). It starts with built-in sample data; upload transactions in **Settings → Data**. Everything runs in the browser, and files stay on the device.
+
+The model is built in: `frontend/model.js` holds the trained weights and the page loads it automatically. To update it, retrain and re-export, then refresh the page:
+
+```bash
+python source/export_model.py   # writes models/shared_model.json and frontend/model.js
+```
+
+`model.js` uses the same weights as `shared_model.json`, with one adjustment: the intercept is lowered by ln(#solo / #shared) to undo the `class_weight="balanced"` training, so the page's "chance it's shared" matches how often purchases really are shared (the page marks purchases shared automatically above 70%).
 
 ## Setup
 
