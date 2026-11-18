@@ -1,13 +1,15 @@
 """Shared-or-solo model: load the labeled transactions, split them, add merchant
 embeddings, and compare ridge logistic regression with and without the embeddings.
 
-Run:  python shared_model.py   (with "Gabriela Transactions.xlsx" in the same folder)
+Run:  python source/shared_model.py   (reads "data/Gabriela Transactions.xlsx", sheet "data_pd")
 Needs: pip install pandas scikit-learn openpyxl sentence-transformers
 
 Split A (random): purchases at stores the model may have seen before.
 Split B (merchant-held-out): every test merchant is absent from training,
 which is the case where embeddings should help.
 """
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -15,7 +17,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.compose import ColumnTransformer
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import average_precision_score
+from sklearn.metrics import average_precision_score, roc_auc_score
 from sklearn.model_selection import GridSearchCV, GroupKFold, StratifiedGroupKFold, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -23,7 +25,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 # =====================================================================
 # Part 1: load, clean, split
 # =====================================================================
-PATH = "Gabriela Transactions.xlsx"
+PATH = Path(__file__).resolve().parent.parent / "data" / "Gabriela Transactions.xlsx"
 SHEET = "data_pd"
 SEED = 0
 
@@ -146,28 +148,58 @@ def make_search(use_embeddings, train):
 
     pipe = Pipeline([
         ("pre", ColumnTransformer(steps)),
-        ("clf", LogisticRegression(penalty="l2", class_weight="balanced", max_iter=5000)),
+        ("clf", LogisticRegression(class_weight="balanced", max_iter=5000)),
     ])
     # Folds grouped by merchant: hyperparameters are tuned for stores the model has not seen.
     folds = list(GroupKFold(n_splits=5).split(train, train["y"], groups=train["merchant"]))
     return GridSearchCV(pipe, grid, scoring="average_precision", cv=folds, n_jobs=-1)
 
 
-# 3. Tune on the training set, then score the test set once.
-results = []
-for split_name, train, test in [("A (random)", trainA, testA), ("B (new merchants)", trainB, testB)]:
+# 3. Tune on the training data, then score held-out data once.
+#    Split A: one random test set.
+#    Split B: all five merchant-held-out folds, because one fold alone can be lucky.
+def evaluate(train, test):
+    """Tune both models on `train`, score them on `test`."""
     tr, te = with_embeddings(train), with_embeddings(test)
+    out = {}
     for use_emb in (False, True):
         search = make_search(use_emb, tr).fit(tr, tr["y"])
         p = search.predict_proba(te)[:, 1]
-        results.append({
-            "split": split_name,
-            "model": "ridge + embeddings" if use_emb else "ridge",
-            "PR-AUC (test)": round(average_precision_score(te["y"], p), 3),
-            "PR-AUC (CV)": round(search.best_score_, 3),
-            "best C": round(search.best_params_["clf__C"], 4),
-            "best PCA size": search.best_params_.get("pre__emb__pca__n_components", "n/a"),
-        })
+        out[use_emb] = {
+            "roc": roc_auc_score(te["y"], p),
+            "pr": average_precision_score(te["y"], p),
+            "params": search.best_params_,
+        }
+    return out
 
-print(f"\nShare of shared purchases in test (PR-AUC of random guessing): {testA['y'].mean():.3f}")
-print(pd.DataFrame(results).to_string(index=False))
+
+runs = {"A (random)": [evaluate(trainA, testA)], "B (new merchants, 5 folds)": []}
+for k, (tr_idx, te_idx) in enumerate(sgkf.split(df, df["y"], groups=df["merchant"])):
+    print(f"Split B, fold {k + 1} of 5...")
+    runs["B (new merchants, 5 folds)"].append(evaluate(df.iloc[tr_idx], df.iloc[te_idx]))
+
+
+def summarize(values):
+    values = np.array(values)
+    return f"{values.mean():.3f}" if len(values) == 1 else f"{values.mean():.3f} \u00b1 {values.std():.3f}"
+
+
+rows = []
+for split_name, split_runs in runs.items():
+    row = {"split": split_name}
+    for metric, label in [("roc", "ROC-AUC"), ("pr", "PR-AUC")]:
+        base = [r[False][metric] for r in split_runs]
+        emb = [r[True][metric] for r in split_runs]
+        row[f"{label} no embeddings"] = summarize(base)
+        row[f"{label} + embeddings"] = summarize(emb)
+        row[f"{label} change"] = f"{np.mean(emb) - np.mean(base):+.3f}"
+    rows.append(row)
+
+summary = pd.DataFrame(rows).set_index("split").T
+print("\n=== Final comparison: embeddings vs. no embeddings ===")
+print(f"Random guessing: ROC-AUC 0.500, PR-AUC {df['y'].mean():.3f} (share of shared purchases)")
+print("Split B shows the average \u00b1 spread across 5 folds.\n")
+print(summary.to_string())
+
+chosen = [r[True]["params"].get("pre__emb__pca__n_components") for rs in runs.values() for r in rs]
+print(f"\nPCA sizes chosen by cross-validation: {chosen}")

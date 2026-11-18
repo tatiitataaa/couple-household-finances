@@ -1,16 +1,5 @@
-# Data & modeling
 pandas
-openpyxl
 numpy
-scipy
+openpyxl
 scikit-learn
-jupyter
-matplotlib
-openai
-
-# Edge export & inference
-skl2onnx
-onnxruntime
-
-# Testing
-pytest
+sentence-transformers

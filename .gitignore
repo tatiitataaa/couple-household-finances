@@ -223,13 +223,12 @@ __marimo__/
 .venv/
 .env
 
-# Expense data is personal. The repo is PRIVATE; only the shared labeled
-# dataset below is tracked. Any other raw files stay local.
-data/raw/*
-!data/raw/.gitkeep
-!data/raw/gabriela_transactions.xlsx
-data/processed/*
-!data/processed/.gitkeep
+# Expense data is personal and must never be committed, so the repo can be public.
+# Keep spreadsheets and exports in data/ (or anywhere) locally only.
+data/
+*.xlsx
+*.xls
+*.csv
 
 # Large model artifacts (commit small exported edge models only if needed)
 models/*
