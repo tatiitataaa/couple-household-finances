@@ -233,3 +233,6 @@ data/
 # Large model artifacts (commit small exported edge models only if needed)
 models/*
 !models/.gitkeep
+# The frontend model is committed on purpose. It contains merchant names,
+# so keep this repository private (or export with anonymized merchants).
+!models/shared_model.json
