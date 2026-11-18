@@ -23,7 +23,7 @@ pip install -r requirements.txt
 
 ## Data
 
-Put the labeled spreadsheet at `data/Gabriela Transactions.xlsx`, with a sheet named `data_pd` and these columns:
+Put the labeled spreadsheet at `data/Gabriela Transactions.xlsx` (or `data/raw/Gabriela Transactions.xlsx`), with a sheet named `data_pd` and these columns:
 `Merchant`, `Amount (USD)`, `Detailed category`, `Payment channel`, `Transaction ID`, and the label **`Solo / Group`** (`Solo` or `Group`).
 
 ## Run

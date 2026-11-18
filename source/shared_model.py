@@ -1,12 +1,33 @@
-"""Shared-or-solo model: load the labeled transactions, split them, add merchant
-embeddings, and compare ridge logistic regression with and without the embeddings.
+"""Shared-or-solo model
 
-Run:  python source/shared_model.py   (reads "data/Gabriela Transactions.xlsx", sheet "data_pd")
-Needs: pip install pandas scikit-learn openpyxl sentence-transformers
+GOAL
+    Predict whether a purchase is SHARED (a couple expense, "Group") or SOLO.
 
-Split A (random): purchases at stores the model may have seen before.
-Split B (merchant-held-out): every test merchant is absent from training,
-which is the case where embeddings should help.
+INPUT
+    One row per labeled purchase: merchant, amount, category, detailed category,
+    payment channel, and the label "Solo / Group".
+
+HOW IT WORKS
+    Part 1. Load and clean the purchases, then split them two ways:
+            - Split A (random): most test stores also appear in training.
+            - Split B (new merchants): no test store appears in training.
+              This is the harder case: will it work for a store it has never seen?
+    Part 2. Turn each merchant name into numbers ("embeddings") with a small
+            pretrained language model, so that e.g. "Trader Joe's" ends up close
+            to "grocery store" even if it never appeared in training.
+    Part 3. Train two ridge logistic regressions and compare them:
+            - without embeddings (merchant, categories, channel, amount)
+            - with embeddings (the same features plus the merchant-name embeddings)
+
+READING THE RESULTS
+    ROC-AUC: 0.5 is random guessing, 1.0 is perfect.
+    PR-AUC:  how well it finds shared purchases. Random guessing scores the
+             share of shared purchases, so compare against that number.
+    "change": embeddings minus no embeddings. Positive means embeddings helped.
+
+Run:  python source/shared_model.py   (reads "data/Gabriela Transactions.xlsx" or
+      "data/raw/Gabriela Transactions.xlsx", sheet "data_pd")
+Needs: pip install -r requirements.txt
 """
 from pathlib import Path
 
@@ -25,7 +46,11 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 # =====================================================================
 # Part 1: load, clean, split
 # =====================================================================
-PATH = Path(__file__).resolve().parent.parent / "data" / "Gabriela Transactions.xlsx"
+ROOT = Path(__file__).resolve().parent.parent
+CANDIDATES = [ROOT / "data" / "Gabriela Transactions.xlsx", ROOT / "data" / "raw" / "Gabriela Transactions.xlsx"]
+PATH = next((p for p in CANDIDATES if p.exists()), None)
+if PATH is None:
+    raise FileNotFoundError(f"Spreadsheet not found. Looked in: {[str(p) for p in CANDIDATES]}")
 SHEET = "data_pd"
 SEED = 0
 
