@@ -225,10 +225,14 @@ __marimo__/
 
 # Expense data is personal and must never be committed, so the repo can be public.
 # Keep spreadsheets and exports in data/ (or anywhere) locally only.
-data/
+data/*
 *.xlsx
 *.xls
 *.csv
+# Exception: data/raw/Transactions.xlsx is synthetic data, committed on purpose.
+!data/raw/
+data/raw/*
+!data/raw/Transactions.xlsx
 
 # Large model artifacts (commit small exported edge models only if needed)
 models/*
