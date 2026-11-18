@@ -280,8 +280,18 @@ button{cursor:pointer}
 .grouplab{font-size:13px;color:var(--muted);margin:22px 16px 8px}
 .filein{display:none}
 .pick{border:0;border-radius:999px;padding:7px 14px;background:var(--surface-2);font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;color:var(--you)}
-.picks{display:flex;flex-direction:column;align-items:stretch;gap:6px;flex:none}
-.picks .pick{text-align:center}
+.datarow{justify-content:flex-start}
+.datarow .t{flex:1;min-width:0}
+.datarow .t small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.datarow .mini{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;flex:none}
+.srcopt{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:12px 0;cursor:pointer}
+.srcopt:focus-visible{outline:2px solid var(--you);outline-offset:2px;border-radius:10px}
+.srcopt + .srcopt{border-top:1px solid var(--line)}
+.srcopt .mid{flex:1;min-width:0}
+.srcopt .nm{font-weight:600;display:flex;align-items:center;gap:8px}
+.srcopt .sm{font-size:13px;color:var(--muted);margin-top:1px}
+.srcopt .chev{color:var(--faint);flex:none}
+.soon{font-size:11px;font-weight:700;color:var(--you);background:var(--you-soft);border-radius:999px;padding:2px 8px}
 .textbtn{border:0;background:none;padding:0;font-weight:500;color:var(--you);font-size:15px;text-align:left;width:100%}
 .textbtn.danger{color:#E5484D}
 
@@ -699,6 +709,9 @@ const ICON = {
   other: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
   tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.2"/>',
   swap: '<path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/>',
+  bank: '<path d="M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>',
+  upload: '<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/>',
+  spark: '<path d="M12 3.5 13.9 9 19.5 11 13.9 13 12 18.5 10.1 13 4.5 11 10.1 9z"/><path d="M18.5 3.5v3M17 5h3"/>',
   rent: '<circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.2-8.2M16 7l2.5 2.5M13.5 9.5 16 12"/>',
   travel: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18"/>',
   entertainment: '<circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.5 3.5-5.5 3.5z"/>'
@@ -1007,11 +1020,14 @@ function renderSettings(){
 
   <div class="grouplab">Data</div>
   <div class="group">
-    ${["me","partner"].map(v => `<div class="item">
+    ${["me","partner"].map(v => `<div class="item datarow">
+      <span class="mini" style="background:${v === "me" ? "var(--you)" : "var(--partner)"}">${esc(initial(nameOf(v)))}</span>
       <span class="t">${esc(S.names[v])}’s card<small>${S.source[v] === "sample" ? "Sample data" : esc(S.source[v])}</small></span>
-      <span class="picks"><input class="filein" type="file" id="f-${v}" accept=".csv,.xlsx,.xls" data-act="upload" data-v="${v}"><label class="pick" for="f-${v}">Upload</label><button class="pick" data-act="plaid" data-v="${v}">Connect with Plaid</button></span>
+      <input class="filein" type="file" id="f-${v}" accept=".csv,.xlsx,.xls" data-act="upload" data-v="${v}">
+      <button class="pick" data-act="adddata" data-v="${v}">Add data</button>
     </div>`).join("")}
-    <div class="item">
+    <div class="item datarow">
+      <span class="mini" style="background:var(--surface-2);color:var(--muted)">${svg(ICON.spark, 'width="16" height="16"')}</span>
       <span class="t">Model<small>${m.version === "placeholder" ? "Placeholder weights (model.js not found)" : `Built in, ${esc(m.version)}${m.trainedOn ? `, trained on ${m.trainedOn.purchases.toLocaleString("en-US")} purchases` : ""}`}</small></span>
     </div>
   </div>
@@ -1364,9 +1380,31 @@ document.addEventListener("click", e => {
     } else decide(y);
   }
   else if (act === "open") openSheet(el.dataset.id);
+  else if (act === "adddata"){
+    const v = el.dataset.v;
+    overlay.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="Add ${esc(nameOf(v))}’s transactions">
+      <div class="grab"></div>
+      <div class="hd"><span class="mini" style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:700;color:#fff;background:${v === "me" ? "var(--you)" : "var(--partner)"}">${esc(initial(nameOf(v)))}</span><div><div class="nm">Add ${esc(nameOf(v))}’s transactions</div><div class="sm">Choose how to bring in purchases</div></div></div>
+      <div style="margin-top:10px">
+        <button class="srcopt" data-act="plaid" data-v="${v}">
+          <span class="cic" style="background:var(--you-soft);color:var(--you)">${svg(ICON.bank)}</span>
+          <span class="mid"><span class="nm">Connect with Plaid<span class="soon">Soon</span></span><span class="sm" style="display:block">Sync card purchases automatically</span></span>
+          <span class="chev">${svg(ICON.chevR, 'width="16" height="16"')}</span>
+        </button>
+        <button class="srcopt" data-act="pickfile" data-v="${v}">
+          <span class="cic" style="background:var(--shared-soft);color:var(--shared)">${svg(ICON.upload)}</span>
+          <span class="mid"><span class="nm">Upload a file</span><span class="sm" style="display:block">CSV or Excel export from your bank</span></span>
+          <span class="chev">${svg(ICON.chevR, 'width="16" height="16"')}</span>
+        </button>
+      </div>
+    </div></div>`;
+    if (e.detail === 0){ const f = overlay.querySelector(".srcopt"); if (f) f.focus(); } /* keyboard only */
+  }
+  else if (act === "pickfile"){ const inp = document.getElementById("f-" + el.dataset.v); closeSheet(); if (inp) inp.click(); }
   else if (act === "plaid"){
     /* Painted door: not built yet. Count the interest and say so honestly. */
     S.plaidInterest = (S.plaidInterest || 0) + 1; save();
+    closeSheet();
     toast(`Connecting ${nameOf(el.dataset.v)}’s bank with Plaid is coming soon. For now, upload a CSV or Excel export.`);
   }
   else if (act === "mark"){
