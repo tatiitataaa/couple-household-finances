@@ -180,11 +180,6 @@ button{cursor:pointer}
 .allrow{display:flex;align-items:center;gap:10px;margin-top:6px;font-size:14px;color:var(--muted)}
 .ends{display:flex;justify-content:space-between;font-size:12px;color:var(--faint);margin-top:2px}
 .preview{margin-top:10px;font-size:13px;color:var(--ink);background:var(--surface-2);border-radius:10px;padding:9px 12px}
-.outcomes{list-style:none;margin:12px 0 0;padding:0;font-size:13px}
-.outcomes li{display:flex;align-items:center;gap:10px;padding:5px 0}
-.outcomes i{width:10px;height:10px;border-radius:50%;flex:none}
-.outcomes span{color:var(--muted);width:88px;flex:none}
-.outcomes b{font-weight:600}
 .switch{appearance:none;-webkit-appearance:none;flex:none;width:50px;height:30px;border-radius:15px;background:var(--line);position:relative;cursor:pointer;margin:0;transition:background .2s}
 .switch::after{content:"";position:absolute;top:2px;left:2px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.2);transition:transform .2s}
 .switch:checked{background:var(--shared)}
@@ -406,7 +401,7 @@ const PLACEHOLDER_MODEL = {
     "log_amount": 0.9
   },
   scaler: { log_amount: { mean: 3.2, scale: 1.0 } },
-  band: { low: 0.2, high: 0.7 },
+  band: { low: 0.2, high: 0.9 },
   learning: { lr: 1.0, lambda: 0.01, categoryFactor: 0.5, maxStep: 1.5 }
 };
 
@@ -530,7 +525,7 @@ function status(t){
   const u = S.userLabels[t.id];
   const sc = score(t);
   if (u === true || u === false) return { kind: u ? "shared" : "solo", source: "you", p: sc.p };
-  const band = S.model.band || {low:0.2, high:0.7};
+  const band = S.model.band || {low:0.2, high:0.9};
   if (sc.p >= band.high) return { kind: "shared", source: "auto", p: sc.p };
   if (sc.p <= band.low) return { kind: "solo", source: "auto", p: sc.p };
   return { kind: "review", source: "model", p: sc.p };
@@ -1009,11 +1004,11 @@ function renderSettings(){
 
   <div class="grouplab">Review</div>
   <div class="group"><div class="item stack">
-    <div class="t">Ask me when there’s at least a <b id="thbig">${Math.round(m.band.low*100)}%</b> chance a purchase is shared</div>
-    <input type="range" min="0.05" max="0.5" step="0.05" value="${m.band.low}" data-act="band" aria-label="Chance of being shared that triggers a review">
-    <div class="ends"><span>Ask more</span><span>Ask less</span></div>
-    <div class="preview" id="thq">${previewText(m.band.low)}</div>
-    <ul class="outcomes" id="outcomes">${outcomesHTML(m.band.low, m.band.high)}</ul>
+    <div class="t">The app sorts the purchases it’s sure about and asks you about the rest.</div>
+    <div class="seg3" role="radiogroup" aria-label="How often to ask">
+      ${REVIEW_LEVELS.map(l => `<button role="radio" data-act="reviewlevel" data-v="${l.key}" aria-checked="${l.key === reviewLevel().key}">${l.label}</button>`).join("")}
+    </div>
+    <p class="muted" style="font-size:13px;margin:10px 0 0">${reviewLevel().text}</p>
   </div></div>
 
   <div class="grouplab">Data</div>
@@ -1151,40 +1146,17 @@ function txSplitHTML(t){
     <div class="ends" style="margin-top:6px"><span>${esc(nameOf(other(t.owner)))}’s share: ${money2(t.amount * (100 - pctO) / 100)}</span></div>
   </div>`;
 }
-const BAND_PRESETS = [
-  [0.4, "Likely shared", "You’ll review purchases that are probably shared but not certain."],
-  [0.2, "Maybe shared", "You’ll review anything that might reasonably be shared."],
-  [0.08, "Any chance", "You’ll review anything with even a small chance of being shared."]
+/* Review levels. Chance >= high: shared automatically; <= low: just yours; in between: Review.
+   Numbers: held-out predictions of the ridge model without embeddings (1,980 purchases),
+   averaged over the stores-seen and new-stores splits. */
+const REVIEW_LEVELS = [
+  { key:"less", label:"Ask less", low:0.2, high:0.7, text:"You review about 1 in 5 purchases. About 7 in 100 get sorted wrong." },
+  { key:"balanced", label:"Balanced", low:0.2, high:0.9, text:"You review about 1 in 3 purchases. About 3 in 100 get sorted wrong." },
+  { key:"more", label:"Ask more", low:0.1, high:0.95, text:"You review about 2 in 5 purchases. About 2 in 100 get sorted wrong." }
 ];
-const nearestPreset = low => BAND_PRESETS.reduce((best, [v]) => Math.abs(v - low) < Math.abs(best - low) ? v : best, BAND_PRESETS[0][0]);
-function outcomesHTML(low, high){
-  const L = Math.round(low*100), H = Math.round(high*100);
-  return `<li><i style="background:var(--you)"></i><span>Under ${L}%</span><b>Counted as just yours</b></li>
-    <li><i style="background:var(--warn)"></i><span>${L}% to ${H}%</span><b>You decide</b></li>
-    <li><i style="background:var(--shared)"></i><span>${H}% or more</span><b>Marked shared automatically</b></li>`;
-}
-function previewText(low){
-  const high = S.model.band.high;
-  const seen = new Set(), ex = [];
-  spend(S.tx[S.viewer]).slice().sort((a,b) => a.date < b.date ? 1 : -1).forEach(t => {
-    const p = score(t).p;
-    if (ex.length < 2 && p >= low && p < high && !seen.has(t.merchant)){ seen.add(t.merchant); ex.push(`${t.merchant} ${money2(t.amount)}`); }
-  });
-  const n = fmtQ(questionsPerMonth(low));
-  return ex.length ? `About ${n} a month, like ${ex.join(" or ")}.` : `About ${n} a month.`;
-}
-function questionsPerMonth(low){
-  const list = spend(S.tx[S.viewer]);
-  const months = new Set(list.map(t => t.date.slice(0,7))).size || 1;
-  const high = S.model.band.high;
-  return list.filter(t => { const p = score(t).p; return p >= low && p < high; }).length / months;
-}
-const fmtQ = q => q < 10 ? String(Math.round(q * 10) / 10) : String(Math.round(q));
-function zonesHTML(low, high){
-  return `<span style="width:${low*100}%;background:var(--you)">${low >= 0.14 ? "Just you" : ""}</span><span style="width:${(high-low)*100}%;background:var(--warn)">Ask me</span><span style="width:${(1-high)*100}%;background:var(--shared)">Auto shared</span>`;
-}
-function ticksHTML(low, high){
-  return `<span style="left:${low*100}%">${Math.round(low*100)}%</span><span style="left:${high*100}%">${Math.round(high*100)}%</span>`;
+function reviewLevel(){
+  const b = S.model.band || {};
+  return REVIEW_LEVELS.find(l => l.low === b.low && l.high === b.high) || REVIEW_LEVELS.find(l => l.key === "balanced");
 }
 function itemSettlement(tid){ return (S.settlements || []).find(s => s.how === "item" && s.txIds && s.txIds[0] === tid); }
 /* A payment between the two people settles everything up to that day. The gap between what was owed and what was paid is shown, and can be carried forward. */
@@ -1486,7 +1458,10 @@ document.addEventListener("click", e => {
     save(); render(); openSheet(el.dataset.id);
   }
   else if (act === "unmark"){ delete S.userLabels[el.dataset.id]; save(); closeSheet(); render(); }
-  else if (act === "bandpreset"){ const v = Number(el.dataset.v); [S.model, S.baseModel].forEach(m => { m.band.low = v; }); save(); render(); }
+  else if (act === "reviewlevel"){
+    const l = REVIEW_LEVELS.find(x => x.key === el.dataset.v);
+    if (l){ [S.model, S.baseModel].forEach(m => { m.band = { low: l.low, high: l.high }; }); save(); render(); }
+  }
   else if (act === "recat"){ e.stopPropagation(); openCatPicker(el.dataset.id); }
   else if (act === "addcat"){
     const input = document.getElementById("newcatname");
@@ -1549,37 +1524,32 @@ document.addEventListener("input", e => {
     if (sv){ const [a,b] = sv.children; a.style.width = S.splitMe + "%"; b.style.width = (100 - S.splitMe) + "%";
       a.textContent = S.splitMe >= 15 ? `${S.names.me} ${S.splitMe}%` : ""; b.textContent = 100 - S.splitMe >= 15 ? `${S.names.partner} ${100 - S.splitMe}%` : ""; }
   }
-  if (el.dataset.act === "band"){
-    const x = Number(el.value);
-    [S.model, S.baseModel].forEach(m => { m.band.low = x; });
-    save();
-    const big = document.getElementById("thbig"); if (big) big.textContent = Math.round(x*100) + "%";
-    const q = document.getElementById("thq"); if (q) q.textContent = previewText(x);
-    const oc = document.getElementById("outcomes"); if (oc) oc.innerHTML = outcomesHTML(x, S.model.band.high);
-  }
 });
 document.addEventListener("change", e => {
   const el = e.target;
   if (el.dataset.act === "name"){ S.names[el.dataset.v] = el.value.trim() || (el.dataset.v === "me" ? "Person 1" : "Person 2"); save(); render(); }
   if (el.dataset.act === "upload" && el.files[0]) readFile(el.dataset.v, el.files[0]);
   if (el.dataset.act === "txsplit"){ render(); openSheet(el.dataset.id); }
-  if (el.dataset.act === "bandtoggle"){ const v = el.checked ? 0.08 : 0.2; [S.model, S.baseModel].forEach(m => { m.band.low = v; }); save(); render(); }
 });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && overlay.innerHTML) closeSheet();
   if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("label.chipbtn")){ e.preventDefault(); e.target.click(); }
 });
 
-/* A newer built-in model replaces the one saved in this browser. Your review threshold is kept;
-   weights learned from earlier swipes are reset, since they were tuned to the old model. */
+/* A newer built-in model replaces the one saved in this browser. The person's review level (band)
+   is kept; weights learned from earlier swipes are reset, since they were tuned to the old model. */
 if (!S.baseModel || S.baseModel.version !== BUILTIN_MODEL.version){
-  const low = S.model && S.model.band ? S.model.band.low : undefined;
+  const band = S.model && S.model.band ? deepCopy(S.model.band) : null;
   S.baseModel = deepCopy(BUILTIN_MODEL); S.model = deepCopy(BUILTIN_MODEL);
-  if (typeof low === "number"){ S.model.band.low = low; S.baseModel.band.low = low; }
+  if (band){ S.model.band = deepCopy(band); S.baseModel.band = deepCopy(band); }
   save();
 }
-/* The automatic-sharing cutoff isn't a user setting; restore it if an earlier version of the page changed it. */
-if (S.model.version === "placeholder"){ S.model.band.high = PLACEHOLDER_MODEL.band.high; S.baseModel.band.high = PLACEHOLDER_MODEL.band.high; save(); }
+/* One-time move to the review levels: start everyone on Balanced (0.2 / 0.9). */
+if (!S.reviewLevelsV1){
+  [S.model, S.baseModel].forEach(m => { m.band = { low: 0.2, high: 0.9 }; });
+  S.reviewLevelsV1 = true;
+  save();
+}
 /* If someone already made a custom category with a built-in name, fold it into the built-in one. */
 (S.customGroups || []).slice().forEach(g => {
   const b = BASE_GROUPS.find(x => x.label.toLowerCase() === String(g.label).toLowerCase());

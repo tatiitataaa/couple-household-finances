@@ -166,7 +166,7 @@ frontend_model = {
     "coef": coef,
     "scaler": {"log_amount": {"mean": export["amount_scaling"]["mean"], "scale": export["amount_scaling"]["std"]}},
     "primaryCategories": PRIMARIES,
-    "band": {"low": 0.2, "high": 0.7},
+    "band": {"low": 0.2, "high": 0.9},  # the page's "Balanced" review level
     "learning": {"lr": 1.0, "lambda": 0.01, "categoryFactor": 0.5, "maxStep": 1.5},
 }
 FRONTEND_OUT.write_text(
